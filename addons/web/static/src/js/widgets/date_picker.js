@@ -13,7 +13,6 @@ var DateWidget = Widget.extend({
     type_of_date: "date",
     events: {
         'dp.change': 'changeDatetime',
-        'dp.show': '_onShow',
         'change .o_datepicker_input': 'changeDatetime',
     },
     /**
@@ -55,7 +54,12 @@ var DateWidget = Widget.extend({
         });
         this.$input.datetimepicker(this.options);
         this.picker = this.$input.data('DateTimePicker');
-        this.$input.click(this.picker.toggle.bind(this.picker));
+        var self = this;
+        this.$input.click(function () {
+            var value = self._parseClient(self.$input.val());
+            self.picker.viewDate(value);
+            self.picker.toggle();
+        });
         this._setReadonly(false);
     },
     /**
@@ -150,25 +154,6 @@ var DateWidget = Widget.extend({
     _setValueFromUi: function() {
         var value = this.$input.val() || false;
         this.setValue(this._parseClient(value));
-    },
-
-    //--------------------------------------------------------------------------
-    // Handlers
-    //--------------------------------------------------------------------------
-
-    /**
-     * set the date of the picker by the current date or the today date
-     *
-     * @private
-     */
-    _onShow: function () {
-        //when opening datetimepicker the date and time by default should be the one from
-        //the input field if any or the current day otherwise
-        var value = moment().second(0);
-        if(this.$input.val().length !== 0 && this.isValid()) {
-            value = this._parseClient(this.$input.val());
-        }
-        this.picker.date(value);
     },
 });
 
