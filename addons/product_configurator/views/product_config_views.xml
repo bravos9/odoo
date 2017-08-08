@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_config_view_form" model="ir.ui.view">
+        <field name="name">product.attribute.form</field>
+        <field name="model">product.attribute</field>
+        <field name="inherit_id" ref="product.product_attribute_view_form"/>
+        <field name="arch" type="xml">
+        <xpath expr="//field[@name='name']" position="after">
+            <field name="value_type" attrs="{'invisible':[('type','not in',['custom_value'])]}"/>
+        </xpath>
+        <xpath expr="//field[@name='type']" position="after">
+            <field name="max_value" attrs="{'invisible':['|',('value_type','not in',['integer','float']),('type','not in','custom_value')]}"/>
+            <field name="min_value" attrs="{'invisible':['|',('value_type','not in',['integer','float']),('type','not in','custom_value')]}"/>
+            <field name="uom_id" attrs="{'invisible':[('type','not in',['custom_value'])]}"/>
+
+        </xpath>
+        <xpath expr="//field[@name='value_type']" position="after">
+        	<field name="required" attrs="{'invisible':[('type','not in',['custom_value'])]}"/>
+        </xpath>
+        <xpath expr="//group[@name='values_ids']" position="attributes">
+        	<attribute name="attrs">{'invisible':[('type','=','custom_value')]}</attribute>
+        </xpath>
+        </field>
+    </record>
+
+    <record id="product_config_variant_modes" model="ir.ui.view">
+    	<field name="name">product.template.product.form</field>
+    	<field name="model">product.template</field>
+    	<field name="inherit_id" ref="product.product_template_only_form_view"/>
+    	<field name="arch" type="xml">
+	    	<xpath expr="//field[@name='attribute_line_ids']" position="before">
+	    		<group>
+	    		<field name="variant_mode"/>
+	    		</group>
+	    	</xpath>	
+    	</field>
+
+    </record>
+
+</odoo>
