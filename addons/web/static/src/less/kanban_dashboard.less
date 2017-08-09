@@ -10,36 +10,10 @@
         overflow: hidden;
     }
 
-    /* This is a hack but this is the least ugly way to do it:
-     * We want two blocks (a visible one and an invisible one)
-     * to be overlap but both height should be equal to the
-     * height of the biggest block. Solution : put 0 width for
-     * the invisible on. The 0 padding and margin is mandatory for
-     * the elements to use the same space in both state (visible
-     * and invisible).
-    */
-    .o_invisible {
-        width: 0;
-        visibility: hidden;
-        padding-left: 0px !important;
-        padding-right: 0px !important;
-        margin-left: 0px !important;
-        margin-right: 0px !important;
-        overflow: hidden;
-
-        * {
-            padding-left: 0px !important;
-            padding-right: 0px !important;
-            margin-left: 0px !important;
-            margin-right: 0px !important;
-        }
-    }
-
     &.o_kanban_dashboard.o_kanban_ungrouped, &.o_kanban_dashboard.o_kanban_grouped {
 
         // If invisible, elem will no take more than its original height
         a, span {
-            .o-text-overflow(inline-block);
             position: relative;
         }
 
@@ -53,7 +27,6 @@
         }
 
         .o_kanban_record {
-            padding: 0;
             position: relative;
             @media (max-width: @screen-xs-max) {
                 margin-bottom: 10px;
