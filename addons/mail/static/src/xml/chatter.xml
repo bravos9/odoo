@@ -9,23 +9,25 @@
         <t t-jquery=".o_composer_attachments_list" t-operation="before">
             <!-- Internal note composer -->
             <t t-if="widget.options.is_log">
-                <span class="o_chatter_composer_info">
-                    Log an internal note which will not be sent to followers, but which can be read
+                <i class="o_chatter_composer_info small">
+                    Log an internal note which <b>will not</b> be sent to followers, but which <b>can be read</b>
                     by users accessing this document.
-                </span>
+                </i>
             </t>
             <!-- New message composer -->
             <t t-if="!widget.options.is_log">
                 <!-- Text for followers -->
-                <span class="o_chatter_composer_info">
-                    To: Followers of
-                    <t t-if="widget.options.record_name">
-                        &quot;<t t-esc="widget.options.record_name"/>&quot;
-                    </t>
-                    <t t-if="!widget.options.record_name">
-                        this document
-                    </t>
-                </span>
+                <small class="o_chatter_composer_info">
+                    <b class="text-muted">To: </b><i class="text-muted">Followers of </i>
+                    <b>
+                        <t t-if="widget.options.record_name">
+                            &quot;<t t-esc="widget.options.record_name"/>&quot;
+                        </t>
+                        <t t-if="!widget.options.record_name">
+                            this document
+                        </t>
+                    </b>
+                </small>
                 <!-- List of followers -->
                 <div class="o_composer_suggested_partners">
                     <t t-foreach='widget.suggested_partners' t-as='recipient'>
@@ -43,7 +45,7 @@
 
         <!-- Add a button to open the full composer dialog -->
         <t t-jquery=".o_composer_button_add_attachment" t-operation="after">
-            <button tabindex="6" class="btn btn-sm btn-icon fa fa-pencil-square-o o_composer_button_full_composer" type="button"/>
+            <button tabindex="6" class="btn btn-sm btn-icon fa fa-expand o_composer_button_full_composer" type="button"/>
         </t>
     </t>
 
@@ -51,14 +53,14 @@
         Chatter (mail_thread widget) buttons
     -->
     <t t-name="mail.Chatter.Buttons">
-        <button t-if="new_message_btn" type="button" class="btn btn-sm btn-primary o_chatter_button_new_message" title="Send a message">
-            New message
+        <button t-if="new_message_btn" type="button" class="btn btn-sm btn-link o_chatter_button_new_message" title="Send a message">
+            Post message
         </button>
         <button t-if="log_note_btn" class="btn btn-sm btn-link o_chatter_button_log_note" title="Log a note. Followers will not be notified.">
-            Log an internal note
+            Log a note
         </button>
         <button t-if="schedule_activity_btn" class="btn btn-sm btn-link o_chatter_button_schedule_activity" title="Lor or schedule an activity">
-            Log or schedule an activity
+            <i class="fa fa-clock-o"/> Schedule activity
         </button>
     </t>
 

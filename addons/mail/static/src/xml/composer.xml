@@ -14,17 +14,18 @@
              </div>
          </t>
          <div t-attf-class="o_composer #{widget.extended ? 'o_extended_composer' : ''}">
-             <div class="o_composer_input">
-                 <textarea class="o_composer_text_field" tabindex="2" placeholder="Write something..."/>
-             </div>
-             <t t-if="!widget.extended">
-                 <div class="btn-group o_composer_buttons">
-                    <button tabindex="3" class="btn btn-sm btn-primary o_composer_button_send" type="button"><t t-esc="widget.options.send_text"/></button>
+             <!-- TODO: Use real user avatar -->
+            <img height="36" width="36" class="o_thread_message_sidebar o_chatter_avatar img-circle" src="https://pbs.twimg.com/profile_images/885832422667038720/NmqlCWGq_400x400.jpg"/>
+
+            <div class="o_composer_input">
+                <textarea class="o_composer_text_field" tabindex="2" placeholder="Write something..."/>
+                <div class="o_chatter_composer_tools" t-if="!widget.extended">
                     <button tabindex="4" class="btn btn-sm btn-icon fa fa-smile-o o_composer_button_emoji" type="button" data-toggle="popover"/>
                     <button tabindex="5" class="btn btn-sm btn-icon fa fa-paperclip o_composer_button_add_attachment" type="button"/>
-                 </div>
-             </t>
+                </div>
+            </div>
          </div>
+         <button t-if="!widget.extended" tabindex="3" class="btn btn-sm btn-primary o_composer_button_send" type="button"><t t-esc="widget.options.send_text"/></button>
 
          <span class="hide">
             <t t-call="HiddenInputFile">

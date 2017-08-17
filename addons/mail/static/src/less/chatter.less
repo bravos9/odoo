@@ -1,33 +1,83 @@
+@o-mail-chatter-gap: 10px;
+
+// Default chatter layout.
+// Extended in enterprise by form_view.less to achieve the side-chatter
 .o_chatter {
     width: 100%;
-
-    .o_chat_composer {
-        margin-top: 10px;
-
-        .o_chatter_composer_info {
-            display: inline-block;
-            margin-bottom: 5px;
-            color: @odoo-main-color-muted;
-            font-style: italic;
-        }
-
-        .o_composer {
-            margin-top: 10px;
-            .o_composer_input {
-                width: 100%;
-                .box-sizing(content-box);
-                resize: vertical;
-                margin-bottom: 5px;
-            }
-        }
-    }
-
-    .o_mail_thread {
-        margin-top: 10px;
-    }
+    padding-top: 0!important;
 
     .o_spinner {
         text-align: center;
         font-size: large;
+    }
+
+    .o_chatter_topbar {
+        height: @odoo-statusbar-height;
+        position: relative;
+        margin: @grid-gutter-width*0.5 -@grid-gutter-width*0.5 0;
+        padding: 0 @grid-gutter-width*0.5;
+
+        > .btn, > .o_followers{
+            height: @odoo-statusbar-height + 1;
+        }
+
+        > .btn {
+            border: 1px solid transparent;
+
+            &.o_active {
+                color: @odoo-brand-primary;
+                background-color: @odoo-color-silver;
+                border: 1px solid @odoo-color-silver-dark;
+                border-bottom: none;
+            }
+        }
+    }
+
+    .o_chat_composer {
+        position: relative;
+        background: @odoo-color-silver;
+        border: 1px solid @odoo-color-silver-dark;
+        padding:  @mail-thread-avatar-size*0.5;
+        padding-left: @grid-gutter-width*0.5 + @mail-thread-avatar-size + @o-mail-chatter-gap ;
+        margin: 0;
+
+        .btn-icon {
+            border: none;
+        }
+
+        .o_composer {
+            background: white;
+            position: relative;
+            border-radius: 2px;
+            border: 1px solid @odoo-color-silver-dark;
+            margin-bottom: @o-mail-chatter-gap;
+            padding: @o-mail-chatter-gap @o-mail-chatter-gap 0;
+
+            .o_chatter_avatar, .o_composer_button_full_composer {
+                .o-position-absolute(0, 0);
+            }
+
+            .o_chatter_avatar {
+                left: -@mail-thread-avatar-size - @o-mail-chatter-gap;
+            }
+
+            textarea {
+                border: none;
+                padding: 0 0 @o-mail-chatter-gap;
+                padding-right: @grid-gutter-width; // avoid overlaps betwenn textarea and o_composer_button_full_composer
+            }
+
+            .o_chatter_composer_tools {
+                border-top: 1px solid @odoo-color-silver-dark;
+            }
+        }
+    }
+
+    .o_chatter_topbar {
+        z-index: 2;
+    }
+
+    .o_chat_composer {
+        z-index: 1;
     }
 }
