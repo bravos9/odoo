@@ -11,3 +11,4 @@ class ProductTemplate(models.Model):
 		[('standard','Standard'),('configurable','Configurable')], 
 		help="Standard variants are generated upfront so that you can manage them in your inventory.\n"
 		"Configurable variants are generated at the sales when the product is added")
+	

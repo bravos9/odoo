@@ -17,7 +17,6 @@ class ProductAttribute(models.Model):
     attribute_line_ids = fields.One2many('product.attribute.line', 'attribute_id', 'Lines')
     create_variant = fields.Boolean(default=True, help="Check this if you want to create multiple variants for this attribute.")
 
-
 class ProductAttributevalue(models.Model):
     _name = "product.attribute.value"
     _order = 'sequence, attribute_id, id'
@@ -95,6 +94,7 @@ class ProductAttributeLine(models.Model):
     attribute_id = fields.Many2one('product.attribute', 'Attribute', ondelete='restrict', required=True)
     value_ids = fields.Many2many('product.attribute.value', string='Attribute Values')
 
+    
     @api.constrains('value_ids', 'attribute_id')
     def _check_valid_attribute(self):
         if any(line.value_ids > line.attribute_id.value_ids for line in self):

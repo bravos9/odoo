@@ -9,9 +9,15 @@
             <field name="value_type" attrs="{'invisible':[('type','not in',['custom_value'])]}"/>
         </xpath>
         <xpath expr="//field[@name='type']" position="after">
+        	<field name="char" attrs="{'invisible':['|',('value_type','not in','char'),('type','not in','custom_value')]}"/>
             <field name="max_value" attrs="{'invisible':['|',('value_type','not in',['integer','float']),('type','not in','custom_value')]}"/>
             <field name="min_value" attrs="{'invisible':['|',('value_type','not in',['integer','float']),('type','not in','custom_value')]}"/>
-            <field name="uom_id" attrs="{'invisible':[('type','not in',['custom_value'])]}"/>
+            <field name="textarea" attrs="{'invisible':['|',('value_type','not in','textarea'),('type','not in','custom_value')]}"/>
+            <field name="color" attrs="{'invisible':['|',('value_type','not in','color'),('type','not in','custom_value')]}"/>
+            <field name="attachment" attrs="{'invisible':['|',('value_type','not in','attachment'),('type','not in','custom_value')]}"/>
+            <field name="date" attrs="{'invisible':['|',('value_type','not in','date'),('type','not in','custom_value')]}"/>
+            <field name="datetime" attrs="{'invisible':['|',('value_type','not in','datetime'),('type','not in','custom_value')]}"/>
+            <field name="uom_id" groups="product.group_uom" attrs="{'invisible':[('type','not in',['custom_value'])]}"/>
 
         </xpath>
         <xpath expr="//field[@name='value_type']" position="after">
