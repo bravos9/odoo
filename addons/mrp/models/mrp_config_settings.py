@@ -21,7 +21,7 @@ class MrpConfigSettings(models.TransientModel):
     module_quality_mrp = fields.Boolean("Quality Control")
     group_mrp_routings = fields.Boolean("Work Orders",
         implied_group='mrp.group_mrp_routings')
-    module_mrp_repair = fields.Boolean("Repair")
+    module_repair = fields.Boolean("Repair")
 
     @api.model
     def get_values(self):
