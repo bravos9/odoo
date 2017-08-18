@@ -1,103 +1,797 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-        <!-- Email tempalte -->
-        <record id="email_template_1" model="mail.template">
-            <field name="name">welcome new partner</field>
-            <field name="email_from">info@openerp.com</field>
-            <field name="subject">Welcome to the Odoo Partner Channel!</field>
-            <field name="email_to">${(object.email or '')|safe}</field>
-            <field name="model_id" ref="base.model_res_partner"/>
-            <field name="body_html"><![CDATA[
-<p>Hello,</p>
-<p>You will receive your welcome pack via email shortly.</p>
-<p>Thank you,</p>
-]]></field>
-        </record>
-        <record id="email_template_2" model="mail.template">
-            <field name="name">congrats silver partner</field>
-            <field name="email_from">info@openerp.com</field>
-            <field name="subject">Congratulations! You are now a Silver Partner!</field>
-            <field name="email_to">${(object.email or '')|safe}</field>
-            <field name="model_id" ref="base.model_res_partner"/>
-            <field name="body_html"><![CDATA[
-<p>Hello,</p>
-<p>We are delighted to welcome you among our Silver Partners as of today!</p>
-<p>Thank you,</p>
-]]></field>
-        </record>
 
-        <record id="email_template_3" model="mail.template">
-            <field name="name">congrats gold partner</field>
-            <field name="email_from">info@openerp.com</field>
-            <field name="subject">Congratulations! You are now one of our Gold Partners!</field>
-            <field name="email_to">${(object.email or '')|safe}</field>
-            <field name="model_id" ref="base.model_res_partner"/>
-            <field name="body_html"><![CDATA[
-<p>Hello,</p>
-<p>We are delighted to let you know that you have entered the select circle of our Gold Partners!</p>
-<p>Thank you,</p>
-]]></field>
-        </record>
+    <record id="mass_mailing_offer_free_trial" model="mail.mass_mailing">
+        <field name="name">Offer free trial</field>
+        <field name="is_automation">True</field>
+        <field name="automation_model_name">res.partner</field>
+        <field name="body_html"><![CDATA[<div class="o_layout o_default_theme"><table class="o_mail_wrapper" style="text-align: center;"><tbody><tr><td class="o_mail_no_resize"></td><td class="o_mail_no_resize o_mail_wrapper_td oe_structure"><div class="o_mail_block_header_logo mb16"><div class="o_mail_snippet_general"><table align="center" cellspacing="0" cellpadding="0" border="0" class="o_mail_table_styles o_mail_h_padding"><tbody><tr><td width="20%"></td><td valign="center" width="60%" class="o_mail_logo_container text-center o_mail_v_padding"><a href="http://www.example.com"><img border="0" src="/mass_mailing/static/src/img/theme_default/s_default_image_logo.png" style="max-width:400px;" alt="Your Logo"></a></td><td width="20%" style="text-align:right"></td></tr></tbody></table></div></div><div class="o_mail_block_title_text"><div class="o_mail_snippet_general"><table align="center" cellspacing="0" cellpadding="0" border="0" class="o_mail_table_styles"><tbody><tr><td width="100%" class="o_mail_h_padding o_mail_v_padding"><h2 class="mt0 o_default_snippet_text">Thank you for joining us!</h2><p class="">We want to take this opportunity to welcome you to our ever-growing community!<br></p><p class="">Here is your free trial.</p><p class=""><a href="/" class="btn btn-primary" data-original-title="" title="">Subscribe</a></p><p class=""><br></p><p class="o_default_snippet_text">Enjoy,</p><img src="/mass_mailing/static/src/img/theme_default//demo/signature.png" style="width:125px; margin-top:8px;margin-bottom:-25px;" alt="Demo Signature"><p><small><strong class="o_default_snippet_text">Michael Fletcher</strong><br><small class="">Community Manager</small></small></p></td></tr><tr><td width="100%" class="o_mail_h_padding o_mail_v_padding"><br></td></tr></tbody></table></div></div></td><td class="o_mail_no_resize"></td></tr></tbody></table></div>]]></field>
+    </record>
 
+    <record id="mass_mailing_after_7_days" model="mail.mass_mailing">
+        <field name="name">After 7 days</field>
+        <field name="is_automation">True</field>
+        <field name="automation_model_name">res.partner</field>
+        <field name="body_html"><![CDATA[<div class="o_layout o_default_theme"><table class="o_mail_wrapper" style="text-align: center;"><tbody><tr><td class="o_mail_no_resize"></td><td class="o_mail_no_resize o_mail_wrapper_td oe_structure"><div class="o_mail_block_header_logo mb16"><div class="o_mail_snippet_general"><table align="center" cellspacing="0" cellpadding="0" border="0" class="o_mail_table_styles o_mail_h_padding"><tbody><tr><td width="20%"></td><td valign="center" width="60%" class="o_mail_logo_container text-center o_mail_v_padding"><a href="http://www.example.com"><img border="0" src="/mass_mailing/static/src/img/theme_default/s_default_image_logo.png" style="max-width:400px;" alt="Your Logo"></a></td><td width="20%" style="text-align:right"></td></tr></tbody></table></div></div><div class="o_mail_block_title_text"><div class="o_mail_snippet_general"><table align="center" cellspacing="0" cellpadding="0" border="0" class="o_mail_table_styles"><tbody><tr><td width="100%" class="o_mail_h_padding o_mail_v_padding"><h2 class="mt0">Join partnership!</h2><p class="">We want to take this opportunity to welcome you to our ever-growing community!<br></p><p class="">Here is link to join partnership.</p><p class=""><a href="/" class="btn btn-primary" data-original-title="" title="">Subscribe</a></p><p class=""><br></p><p class="o_default_snippet_text">Enjoy,</p><img src="/mass_mailing/static/src/img/theme_default//demo/signature.png" style="width:125px; margin-top:8px;margin-bottom:-25px;" alt="Demo Signature"><p><small><strong class="o_default_snippet_text">Michael Fletcher</strong><br><small class="">Community Manager</small></small></p></td></tr><tr><td width="100%" class="o_mail_h_padding o_mail_v_padding"><br></td></tr></tbody></table></div></div></td><td class="o_mail_no_resize"></td></tr></tbody></table></div>]]></field>
+    </record>
 
+    <record id="server_action_message_sales_person" model="ir.actions.server">
+        <field name="name">Message for sales person</field>
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="state">code</field>
+        <field name="code">
+            record.message_post(body='%s is interested for partner.' % record.name)
+        </field>
+    </record>
 
-    <!-- Campaign -->
-        <record id="marketing_automation_openerppartnerchannel" model="marketing.automation">
-            <field name="name">Odoo Partner Channel</field>
-            <field name="object_id" ref="base.model_res_partner"/>
-            <field name="mode">active</field>
-        </record>
+    <record id="activity_1" model="marketing.automation.activity">
+        <field name="name">Offer free trial</field>
+        <field name="mass_mailing_id" ref="mass_mailing_offer_free_trial" />
+    </record>
 
-            <!-- Activity -->
+    <record id="activity_2" model="marketing.automation.activity">
+        <field name="name">After 7 days (if not partner yet)</field>
+        <field name="mass_mailing_id" ref="mass_mailing_after_7_days" />
+        <field name="interval_number">7</field>
+        <field name="interval_type">days</field>
+        <field name="condition">[['category_id', 'not ilike', 'Partner']]</field>
+    </record>
 
-        <record id="marketing_automation_activity_0" model="marketing.automation.activity">
-            <field name="name">New Partner</field>
-            <field name="campaign_id" ref="marketing_automation_openerppartnerchannel"/>
-            <field name="email_template_id" ref="email_template_1"/>
-            <field name="condition">object.credit_limit &lt; 10000</field>
-            <field name="keep_if_condition_not_met">True</field>
-            <field eval="1" name="start"/>
-        </record>
-        <record id="marketing_automation_activity_1" model="marketing.automation.activity">
-            <field name="name">Silver Partner</field>
-            <field name="campaign_id" ref="marketing_automation_openerppartnerchannel"/>
-            <field name="condition">object.credit_limit &gt;= 10000 and object.credit_limit &lt; 50000</field>
-            <field name="keep_if_condition_not_met">True</field>
-            <field name="email_template_id" ref="email_template_2"/>
-        </record>
+    <record id="activity_3" model="marketing.automation.activity">
+        <field name="name">Message for sales person</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="trigger_type">mail_reply</field>
+        <field name="activity_type">action</field>
+        <field name="server_action_id" ref="server_action_message_sales_person" />
+        <field name="parent_id" ref="activity_2" />
+    </record>
 
-        <record id="marketing_automation_activity_2" model="marketing.automation.activity">
-            <field name="name">Gold Partner</field>
-            <field name="condition">object.credit_limit &gt;= 100000</field>
-            <field name="campaign_id" ref="marketing_automation_openerppartnerchannel"/>
-            <field name="keep_if_condition_not_met">True</field>
-            <field name="email_template_id" ref="email_template_3"/>
-        </record>
+    <record id="campaign_1" model="marketing.automation.campaign">
+        <field name="name">Partnership Offer</field>
+        <field name="state">running</field>
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="domain">[['customer', '=', True]]</field>
+        <field name="activity_ids" eval="[(4, ref('activity_1')), (4, ref('activity_2')), (4, ref('activity_3'))]" />
+    </record>
 
+    <!-- Workitem 1 -->
 
-    <!-- Transition -->
-        <record id="marketing_automation_transition_0" model="marketing.automation.transition">
-            <field name="activity_from_id" ref="marketing_automation_activity_0"/>
-            <field name="activity_to_id" ref="marketing_automation_activity_1"/>
-        </record>
+    <record id="workitem_1" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_25" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
 
-        <record id="marketing_automation_transition_1" model="marketing.automation.transition">
-            <field name="activity_from_id" ref="marketing_automation_activity_1"/>
-            <field name="activity_to_id" ref="marketing_automation_activity_2"/>
-        </record>
+    <record id="statistics_1_workitem_1" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_1" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
 
-    <!-- Segment -->
-        <record id="filter0" model="ir.filters">
-            <field name="name">Partners</field>
-            <field name="domain">[('name','like','Agrolait')]</field>
-            <field name="model_id">res.partner</field>
-        </record>
-        <record id="marketing_automation_segment0" model="marketing.automation.segment">
-            <field eval="time.strftime('%Y-%m-%d %H:%M:%S')" name="date_run"/>
-            <field name="name">Odoo Partner</field>
-            <field name="sync_mode">create_date</field>
-            <field name="ir_filter_id" ref="filter0"/>
-            <field name="campaign_id" ref="marketing_automation_openerppartnerchannel"/>
-        </record>
+    <record id="statistics_2_workitem_1" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_1" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_1" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_1" />
+        <field name="parent_id" ref="statistics_2_workitem_1" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=7) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 2 -->
+
+    <record id="workitem_2" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_22" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_2" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_2" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=13)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_2" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_2" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=6)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_2" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_2" />
+        <field name="parent_id" ref="statistics_2_workitem_2" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=6) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 3 -->
+
+    <record id="workitem_3" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_4" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_3" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_3" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=13)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_3" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_3" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=6)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_3" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_3" />
+        <field name="parent_id" ref="statistics_2_workitem_3" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=6) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 4 -->
+
+    <record id="workitem_4" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_3" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_4" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_4" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=12)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_4" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_4" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_4" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_4" />
+        <field name="parent_id" ref="statistics_2_workitem_4" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=5) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 5 -->
+
+    <record id="workitem_5" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_12" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_5" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_5" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=11)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_5" model="marketing.automation.statistics">
+        <field name="state">rejected</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_5" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 6 -->
+
+    <record id="workitem_6" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_16" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_6" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_6" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=11)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_6" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_6" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_6" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_6" />
+        <field name="parent_id" ref="statistics_2_workitem_6" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=4) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 7 -->
+
+    <record id="workitem_7" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_28" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_7" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_7" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=11)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_7" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_7" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_7" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_7" />
+        <field name="parent_id" ref="statistics_2_workitem_7" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=4) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 8 -->
+
+    <record id="workitem_8" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_15" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_8" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_8" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=11)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_8" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_8" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_8" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_8" />
+        <field name="parent_id" ref="statistics_2_workitem_8" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=4) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 9 -->
+
+    <record id="workitem_9" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_3" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_9" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_9" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=10)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_9" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_9" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_9" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_9" />
+        <field name="parent_id" ref="statistics_2_workitem_9" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=3) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 10 -->
+
+    <record id="workitem_10" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_5" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_10" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_10" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=10)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_10" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_10" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 11 -->
+
+    <record id="workitem_11" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_10" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_11" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_11" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=10)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_11" model="marketing.automation.statistics">
+        <field name="state">rejected</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_11" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 12 -->
+
+    <record id="workitem_12" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.demo_user0_res_partner" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_12" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_12" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=9)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_12" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_12" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_12" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_12" />
+        <field name="parent_id" ref="statistics_2_workitem_12" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=2) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 13 -->
+
+    <record id="workitem_13" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_11" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_13" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_13" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=9)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_13" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_13" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_13" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_13" />
+        <field name="parent_id" ref="statistics_2_workitem_13" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=2) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 14 -->
+
+    <record id="workitem_14" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_13" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_14" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_14" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=9)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_14" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_14" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_14" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_14" />
+        <field name="parent_id" ref="statistics_2_workitem_14" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=2) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 15 -->
+
+    <record id="workitem_15" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_14" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_15" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_15" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=8)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_15" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_15" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_15" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_15" />
+        <field name="parent_id" ref="statistics_2_workitem_15" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=1) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 16 -->
+
+    <record id="workitem_16" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_34" />
+        <field name="state">completed</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_16" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_16" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=8)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_16" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_16" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_reply">True</field>
+    </record>
+
+    <record id="statistics_3_workitem_16" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_3" />
+        <field name="workitem_id" ref="workitem_16" />
+        <field name="parent_id" ref="statistics_2_workitem_16" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=1) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 17 -->
+
+    <record id="workitem_17" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_33" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_17" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_17" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_17" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_17" />
+        <field name="schedule_date" eval="DateTime.now().strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 18 -->
+
+    <record id="workitem_18" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_24" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_18" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_18" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=6)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_click">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_18" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_18" />
+        <field name="schedule_date" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 19 -->
+
+    <record id="workitem_19" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_32" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_19" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_19" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_19" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_19" />
+        <field name="schedule_date" eval="(DateTime.now() + timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 20 -->
+
+    <record id="workitem_20" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_10" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_20" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_20" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_20" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_20" />
+        <field name="schedule_date" eval="(DateTime.now() + timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 21 -->
+
+    <record id="workitem_21" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_17" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_21" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_21" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_21" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_21" />
+        <field name="schedule_date" eval="(DateTime.now() + timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 22 -->
+
+    <record id="workitem_22" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_2" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_22" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_22" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_click">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_22" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_22" />
+        <field name="schedule_date" eval="(DateTime.now() + timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 23 -->
+
+    <record id="workitem_23" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_18" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_23" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_23" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=3)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <record id="statistics_2_workitem_23" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_23" />
+        <field name="schedule_date" eval="(DateTime.now() + timedelta(days=4)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 24 -->
+
+    <record id="workitem_24" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_30" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_24" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_24" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+        <field name="mail_click">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_24" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_24" />
+        <field name="schedule_date" eval="(DateTime.now() + timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
+
+    <!-- Workitem 25 -->
+
+    <record id="workitem_25" model="marketing.automation.workitem">
+        <field name="campaign_id" ref="campaign_1" />
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="res_id" ref="base.res_partner_address_18" />
+        <field name="state">running</field>
+        <field name="test_mode">False</field>
+    </record>
+
+    <record id="statistics_1_workitem_25" model="marketing.automation.statistics">
+        <field name="state">processed</field>
+        <field name="activity_id" ref="activity_1" />
+        <field name="workitem_id" ref="workitem_25" />
+        <field name="schedule_date" eval="(DateTime.now() - timedelta(days=2)).strftime('%Y-%m-%d %H:%M:%S')" />
+        <field name="mail_open">True</field>
+    </record>
+
+    <record id="statistics_2_workitem_25" model="marketing.automation.statistics">
+        <field name="activity_id" ref="activity_2" />
+        <field name="workitem_id" ref="workitem_25" />
+        <field name="schedule_date" eval="(DateTime.now() + timedelta(days=5)).strftime('%Y-%m-%d %H:%M:%S')" />
+    </record>
 
 </odoo>

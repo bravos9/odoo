@@ -1,620 +1,738 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from dateutil.relativedelta import relativedelta
-from traceback import format_exception
-from sys import exc_info
-
-import re
+import json
+from collections import defaultdict
+from datetime import timedelta, datetime, date
 
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError, ValidationError
-from odoo.tools import pycompat
+from odoo.exceptions import ValidationError
+from odoo.osv import expression
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
 from odoo.tools.safe_eval import safe_eval
 
-from odoo.addons import decimal_precision as dp
-
-_intervalTypes = {
-    'hours': lambda interval: relativedelta(hours=interval),
-    'days': lambda interval: relativedelta(days=interval),
-    'months': lambda interval: relativedelta(months=interval),
-    'years': lambda interval: relativedelta(years=interval),
-}
+import logging
+_logger = logging.getLogger(__name__)
 
 
-class MarketingAutomation(models.Model):
-    _name = "marketing.automation"
-    _description = "Marketing Campaign"
+class MarketingAutomationCampaign(models.Model):
+    _name = 'marketing.automation.campaign'
+    _description = 'Marketing Automation Campaign'
+    _inherits = {'utm.campaign': 'utm_campaign_id'}
 
-    name = fields.Char('Name', required=True)
-    object_id = fields.Many2one('ir.model', 'Resource', required=True,
-        help="Choose the resource on which you want this campaign to be run")
-    partner_field_id = fields.Many2one('ir.model.fields', 'Partner Field',
-        domain="[('model_id', '=', object_id), ('ttype', '=', 'many2one'), ('relation', '=', 'res.partner')]",
-        help="The generated workitems will be linked to the partner related to the record. "
-             "If the record is the partner itself leave this field empty. "
-             "This is useful for reporting purposes, via the Campaign Analysis or Campaign Follow-up views.")
-    unique_field_id = fields.Many2one('ir.model.fields', 'Unique Field',
-        domain="[('model_id', '=', object_id), ('ttype', 'in', ['char','int','many2one','text','selection'])]",
-        help='If set, this field will help segments that work in "no duplicates" mode to avoid '
-             'selecting similar records twice. Similar records are records that have the same value for '
-             'this unique field. For example by choosing the "email_from" field for CRM Leads you would prevent '
-             'sending the same campaign to the same email address again. If not set, the "no duplicates" segments '
-             "will only avoid selecting the same record again if it entered the campaign previously. "
-             "Only easily comparable fields like textfields, integers, selections or single relationships may be used.")
-    mode = fields.Selection([
-        ('test', 'Test Directly'),
-        ('test_realtime', 'Test in Realtime'),
-        ('manual', 'With Manual Confirmation'),
-        ('active', 'Normal')
-        ], 'Mode', required=True, default="test",
-        help="Test - It creates and process all the activities directly (without waiting "
-             "for the delay on transitions) but does not send emails or produce reports. \n"
-             "Test in Realtime - It creates and processes all the activities directly but does "
-             "not send emails or produce reports.\n"
-             "With Manual Confirmation - the campaigns runs normally, but the user has to \n "
-             "validate all workitem manually.\n"
-             "Normal - the campaign runs normally and automatically sends all emails and "
-             "reports (be very careful with this mode, you're live!)")
+    def _default_model_id(self):
+        return self.env['ir.model'].search([('model', '=', 'res.partner')])
+
     state = fields.Selection([
         ('draft', 'New'),
         ('running', 'Running'),
-        ('cancelled', 'Cancelled'),
-        ('done', 'Done')
-        ], 'Status', copy=False, default="draft")
-    activity_ids = fields.One2many('marketing.automation.activity', 'campaign_id', 'Activities')
-    fixed_cost = fields.Float('Fixed Cost',
-        help="Fixed cost for running this campaign. You may also specify variable cost and revenue on each "
-             "campaign activity. Cost and Revenue statistics are included in Campaign Reporting.",
-        digits=dp.get_precision('Product Price'))
-    segment_ids = fields.One2many('marketing.automation.segment', 'campaign_id', 'Segments', readonly=False)
-    segments_count = fields.Integer(compute='_compute_segments_count', string='Segments')
+        ('stopped', 'Stopped')], copy=False, default='draft')
+    model_id = fields.Many2one('ir.model', required=True, string='Model', default=lambda self: self._default_model_id(),
+        domain="[('field_id.name', '=', 'message_ids'), ('model', '!=', 'mail.thread')]")
+    model_name = fields.Char(related='model_id.model', string='Model Name')
+    domain = fields.Char(string='Filter', default=[], help='Apply filter on target model before push them into workflow')
+    unique_field_id = fields.Many2one('ir.model.fields', string='Unique Field',
+        domain="[('model_id', '=', model_id), ('ttype', 'in', ['char', 'int', 'many2one', 'text', 'selection'])]",
+        help="Used for avoiding duplicates based on model field.\ne.g. For model 'Customers', Select email field here, If you don't want to process record which have same email address")
+    activity_ids = fields.One2many('marketing.automation.activity', 'campaign_id', string='Activities')
+    active = fields.Boolean(default=True)
+    last_sync_date = fields.Datetime()
+    utm_campaign_id = fields.Many2one('utm.campaign', 'Utm Campaign', required=True, ondelete='cascade')
+    total_workitems = fields.Integer(compute='_compute_workitems')
+    running_workitems = fields.Integer(compute='_compute_workitems')
+    completed_workitems = fields.Integer(compute='_compute_workitems')
+    is_workitems_outdated = fields.Boolean(compute='_compute_is_workitems_outdated')
 
-    @api.multi
-    def _compute_segments_count(self):
+    def _compute_workitems(self):
+        """Computes the wortitem counts by state"""
+        self.env.cr.execute("""
+            SELECT
+                campaign_id,
+                COUNT(CASE WHEN state = 'running' THEN 1 ELSE null END) AS running,
+                COUNT(CASE WHEN state = 'completed' THEN 1 ELSE null END) AS completed
+            FROM
+                marketing_automation_workitem
+            WHERE
+                campaign_id IN %s
+            GROUP BY
+                campaign_id;
+        """, (tuple(self.ids), ))
+        for result in self.env.cr.dictfetchall():
+            self.browse(result['campaign_id']).update({
+                'total_workitems': result['running'] + result['completed'],
+                'running_workitems': result['running'],
+                'completed_workitems': result['completed']
+            })
+
+    def _compute_is_workitems_outdated(self):
+        """ It computes, if there is a possibility of out of sync workitems"""
         for campaign in self:
-            campaign.segments_count = len(campaign.segment_ids)
+            activities_changed = campaign.activity_ids.filtered(lambda a: a.interval_update_date >= campaign.last_sync_date or a.create_date >= campaign.last_sync_date)
+            if activities_changed and campaign.last_sync_date and campaign.running_workitems:
+                campaign.is_workitems_outdated = True
+            else:
+                campaign.is_workitems_outdated = False
 
-    @api.multi
-    def state_draft_set(self):
-        return self.write({'state': 'draft'})
+    @api.constrains('activity_ids', 'state')
+    def _check_activities(self):
+        """ Running campaign must have at least one activity"""
+        if self.state == 'running' and not len(self.activity_ids):
+            raise ValidationError(_('You must have at least one activity to start this campaign'))
 
-    @api.multi
-    def state_running_set(self):
-        # TODO check that all subcampaigns are running
-        self.ensure_one()
+    def no_sync_outdated(self):
+        for campaign in self:
+            campaign.last_sync_date = fields.datetime.now()
 
-        if not self.activity_ids:
-            raise UserError(_("The campaign cannot be started. There are no activities in it."))
-
-        has_start = False
-        has_signal_without_from = False
-
-        for activity in self.activity_ids:
-            if activity.start:
-                has_start = True
-            if activity.signal and len(activity.from_ids) == 0:
-                has_signal_without_from = True
-
-        if not has_start and not has_signal_without_from:
-            raise UserError(_("The campaign cannot be started. It does not have any starting activity. Modify campaign's activities to mark one as the starting point."))
-
-        return self.write({'state': 'running'})
-
-    @api.multi
-    def state_done_set(self):
-        # TODO check that this campaign is not a subcampaign in running mode.
-        if self.mapped('segment_ids').filtered(lambda segment: segment.state == 'running'):
-            raise UserError(_("The campaign cannot be marked as done before all segments are closed."))
-        return self.write({'state': 'done'})
-
-    @api.multi
-    def state_cancel_set(self):
-        # TODO check that this campaign is not a subcampaign in running mode.
-        return self.write({'state': 'cancelled'})
-
-    def _get_partner_for(self, record):
-        partner_field = self.partner_field_id.name
-        if partner_field:
-            return record[partner_field]
-        elif self.object_id.model == 'res.partner':
-            return record
-        return None
-
-    # prevent duplication until the server properly duplicates several levels of nested o2m
-    @api.multi
-    def copy(self, default=None):
-        self.ensure_one()
-        raise UserError(_('Duplicating campaigns is not supported.'))
-
-    def _find_duplicate_workitems(self, record):
-        """Finds possible duplicates workitems for a record in this campaign, based on a uniqueness
-           field.
-
-           :param Model record: to find duplicates workitems for.
+    def sync_outdated(self):
+        """ It will synchronize all running workitems which need to update there schedule dates based on change in related activity
+            It is done in 2 part:
+                1) Update statistics related to updated activities
+                2) Create new statistics is user added new activity in workflow
+            Here Update/Create is only applied on those statistics which are in valid timespan
+            e.g. if user add an activity with 2 hour delay and workitem is older then 2 hour sync_outdated will not create new statistics for such workitems
         """
-        self.ensure_one()
-        duplicate_workitem_domain = [('res_id', '=', record.id), ('campaign_id', '=', self.id)]
-        unique_field = self.unique_field_id
-        if unique_field:
-            unique_value = getattr(record, unique_field.name, None)
-            if unique_value:
-                if unique_field.ttype == 'many2one':
-                    unique_value = unique_value.id
-                similar_res_ids = self.env[self.object_id.model].search([(unique_field.name, '=', unique_value)])
-                if similar_res_ids:
-                    duplicate_workitem_domain = [
-                        ('res_id', 'in', similar_res_ids.ids),
-                        ('campaign_id', '=', self.id)
-                    ]
-        return self.env['marketing.automation.workitem'].search(duplicate_workitem_domain)
+        Statistics = self.env['marketing.automation.statistics']
+        Workitem = self.env['marketing.automation.workitem']
+        for campaign in self:
 
+            # If change has been made in existing activities
+            activities_changed = campaign.activity_ids.filtered(lambda a: a.interval_update_date >= campaign.last_sync_date)
+            stats_to_change = Statistics.search([('state', '=', 'scheduled'),  ('activity_id', 'in', activities_changed.ids)])  # No need to check whether workitem is completed or not because completed workitems don't have scheduled stats
+            if stats_to_change:
+                stats_to_change._recompute_schedule_date()
 
-class MarketingAutomationSegment(models.Model):
-    _name = "marketing.automation.segment"
-    _description = "Campaign Segment"
-    _order = "name"
+            # If new activities added
+            activities_added = campaign.activity_ids.filtered(lambda a: a.create_date >= campaign.last_sync_date)
+            for act in activities_added:
+                if act.trigger_type == 'begin':
+                    min_date = (datetime.now() - timedelta(hours=act.delay_in_hours)).strftime(DEFAULT_SERVER_DATETIME_FORMAT)
+                    for wi in Workitem.search([('state', '!=', 'completed'), ('create_date', '>', min_date), ('create_date', '<', act.create_date)]):
+                        Statistics.create({
+                            'activity_id': act.id,
+                            'workitem_id': wi.id,
+                            'schedule_date': datetime.strptime(wi.create_date, DEFAULT_SERVER_DATETIME_FORMAT) + timedelta(hours=act.delay_in_hours)
+                        })
+                elif act.trigger_type in ['act', 'mail_not_open', 'mail_not_click', 'mail_not_reply']:
+                    min_date = (datetime.now() - timedelta(hours=act.delay_in_hours)).strftime(DEFAULT_SERVER_DATETIME_FORMAT)
+                    domain = [('workitem_id.state', '!=', 'completed'), ('state', '=', 'processed'), ('activity_id', '=', act.parent_id.id), ('schedule_date', '>', min_date), ('schedule_date', '<', act.create_date)]
+                    for stat in Statistics.search(domain):
+                        Statistics.create({
+                            'activity_id': act.id,
+                            'workitem_id': stat.workitem_id.id,
+                            'parent_id': stat.id,
+                            'schedule_date': datetime.strptime(stat.schedule_date, DEFAULT_SERVER_DATETIME_FORMAT) + timedelta(hours=act.delay_in_hours)
+                        })
+                else:
+                    min_date = (datetime.now() - timedelta(hours=act.delay_in_hours)).strftime(DEFAULT_SERVER_DATETIME_FORMAT)
+                    date_field = act.trigger_type + '_date'
+                    domain = [('workitem_id.state', '!=', 'completed'), ('state', '=', 'processed'), ('activity_id', '=', act.parent_id.id), ('schedule_date', '<', act.create_date), '|', (act.trigger_type, '=', False), '&', (act.trigger_type, '=', True), (date_field, '>', min_date)]
+                    for stat in Statistics.search(domain):
+                        vals = {
+                            'activity_id': act.id,
+                            'workitem_id': stat.workitem_id.id,
+                            'parent_id': stat.id
+                        }
+                        if stat[act.trigger_type]:
+                            vals['schedule_date'] = datetime.strptime(stat.schedule_date, DEFAULT_SERVER_DATETIME_FORMAT) + timedelta(hours=act.delay_in_hours)
+                        Statistics.create(vals)
+            campaign.no_sync_outdated()
 
-    name = fields.Char('Name', required=True)
-    campaign_id = fields.Many2one('marketing.automation', 'Campaign', required=True, index=True, ondelete="cascade")
-    object_id = fields.Many2one('ir.model', related='campaign_id.object_id', string='Resource')
-    ir_filter_id = fields.Many2one('ir.filters', 'Filter', ondelete="restrict",
-        domain=lambda self: [('model_id', '=', self.object_id._name)],
-        help="Filter to select the matching resource records that belong to this segment. "
-             "New filters can be created and saved using the advanced search on the list view of the Resource. "
-             "If no filter is set, all records are selected without filtering. "
-             "The synchronization mode may also add a criterion to the filter.")
-    sync_last_date = fields.Datetime('Last Synchronization',
-        help="Date on which this segment was synchronized last time (automatically or manually)")
-    sync_mode = fields.Selection([
-        ('create_date', 'Only records created after last sync'),
-        ('write_date', 'Only records modified after last sync (no duplicates)'),
-        ('all', 'All records (no duplicates)')],
-        'Synchronization mode', default='create_date',
-        help="Determines an additional criterion to add to the filter when selecting new records to inject in the campaign. "
-             '"No duplicates" prevents selecting records which have already entered the campaign previously.'
-             'If the campaign has a "unique field" set, "no duplicates" will also prevent selecting records which have '
-             'the same value for the unique field as other records that already entered the campaign.')
-    state = fields.Selection([
-        ('draft', 'New'),
-        ('cancelled', 'Cancelled'),
-        ('running', 'Running'),
-        ('done', 'Done')],
-        'Status', copy=False, default='draft')
-    date_run = fields.Datetime('Launch Date', help="Initial start date of this segment.")
-    date_done = fields.Datetime('End Date', help="Date this segment was last closed or cancelled.")
-    date_next_sync = fields.Datetime(compute='_compute_date_next_sync', string='Next Synchronization',
-        help="Next time the synchronization job is scheduled to run automatically")
+    def start_campaign(self):
+        for campaign in self:
+            campaign.state = 'running'
 
-    def _compute_date_next_sync(self):
-        # next auto sync date is same for all segments
-        sync_job = self.sudo().env.ref('marketing_automation.ir_cron_marketing_automation_every_day')
-        self.date_next_sync = sync_job and sync_job.nextcall or False
+    def stop_campaign(self):
+        for campaign in self:
+            campaign.state = 'stopped'
 
-    @api.constrains('ir_filter_id', 'campaign_id')
-    def _check_model(self):
-        if self.filtered(lambda segment: segment.ir_filter_id and
-                segment.campaign_id.object_id.model != segment.ir_filter_id.model_id):
-            raise ValidationError(_('Model of filter must be same as resource model of Campaign'))
+    def synchronize_target(self):
+        """ Responsible for pushing new records in to activity workflow.
+            It is done by generating new workitems for records which follow all these rules
+                > Records which are not synchronized yet e.g recently created/updated records.
+                > Records which are pass the campaign domain filter.
+                > Records which not removed by 'unique_field_id' to filter.
+        """
+        if not self.ids:
+            self = self.search([('state', '=', 'running')])  # If called from cron
 
-    @api.onchange('campaign_id')
-    def onchange_campaign_id(self):
-        res = {'domain': {'ir_filter_id': []}}
-        model = self.campaign_id.object_id.model
-        if model:
-            res['domain']['ir_filter_id'] = [('model_id', '=', model)]
-        else:
-            self.ir_filter_id = False
-        return res
-
-    @api.multi
-    def state_draft_set(self):
-        return self.write({'state': 'draft'})
-
-    @api.multi
-    def state_running_set(self):
-        self.ensure_one()
-        vals = {'state': 'running'}
-        if not self.date_run:
-            vals['date_run'] = fields.Datetime.now()
-        return self.write(vals)
-
-    @api.multi
-    def state_done_set(self):
-        self.env["marketing.automation.workitem"].search([
-            ('state', '=', 'todo'),
-            ('segment_id', 'in', self.ids)
-        ]).write({'state': 'cancelled'})
-        return self.write({'state': 'done', 'date_done': fields.Datetime.now()})
-
-    @api.multi
-    def state_cancel_set(self):
-        self.env["marketing.automation.workitem"].search([
-            ('state', '=', 'todo'),
-            ('segment_id', 'in', self.ids)
-        ]).write({'state': 'cancelled'})
-        return self.write({'state': 'cancelled', 'date_done': fields.Datetime.now()})
-
-    @api.multi
-    def process_segment(self):
-        Workitems = self.env['marketing.automation.workitem']
-        Activities = self.env['marketing.automation.activity']
-        if not self:
-            self = self.search([('state', '=', 'running')])
-
-        action_date = fields.Datetime.now()
-        campaigns = self.env['marketing.automation']
-        for segment in self:
-            if segment.campaign_id.state != 'running':
+        Workitem = self.env['marketing.automation.workitem']
+        for campaign in self:
+            if campaign.state != 'running':  # for manual sync button
                 continue
+            if not campaign.activity_ids:
+                continue
+            if not campaign.last_sync_date or not campaign.running_workitems:
+                campaign.last_sync_date = fields.Datetime.now()
 
-            campaigns |= segment.campaign_id
-            activity_ids = Activities.search([('start', '=', True), ('campaign_id', '=', segment.campaign_id.id)]).ids
+            CampaignModel = self.env[campaign.model_name]
 
-            criteria = []
-            if segment.sync_last_date and segment.sync_mode != 'all':
-                criteria += [(segment.sync_mode, '>', segment.sync_last_date)]
-            if segment.ir_filter_id:
-                criteria += safe_eval(segment.ir_filter_id.domain)
+            # This will fetch new records appeared after last sync
+            existing_workitem = Workitem.search_read([('campaign_id', '=', campaign.id), ('test_mode', '=', False)], ['res_id'])
+            exclude_ids = [rec['res_id'] for rec in existing_workitem]
+            domain = [('id', 'not in', exclude_ids)]
 
-            # XXX TODO: rewrite this loop more efficiently without doing 1 search per record!
-            for record in self.env[segment.object_id.model].search(criteria):
-                # avoid duplicate workitem for the same resource
-                if segment.sync_mode in ('write_date', 'all'):
-                    if segment.campaign_id._find_duplicate_workitems(record):
-                        continue
+            # If campaign have unique_field_id we need to check uniqueness based on 'unique_field_id' field
+            if campaign.unique_field_id and campaign.unique_field_id.name != 'id':
+                # Don't use browse maybe record is deleted
+                exsiting_records = CampaignModel.search_read([('id', 'in', exclude_ids)])
+                unique_field_vals = list(set([rec[campaign.unique_field_id.name] for rec in exsiting_records]))
+                unique_domain = [(campaign.unique_field_id.name, 'not in', unique_field_vals)]
+                domain = expression.AND([unique_domain, domain])
 
-                wi_vals = {
-                    'segment_id': segment.id,
-                    'date': action_date,
-                    'state': 'todo',
-                    'res_id': record.id
-                }
+            if campaign.domain:
+                domain = expression.AND([domain, safe_eval(campaign.domain)])
 
-                partner = segment.campaign_id._get_partner_for(record)
-                if partner:
-                    wi_vals['partner_id'] = partner.id
+            primary_activities = campaign.activity_ids.filtered(lambda act: act.trigger_type == 'begin')
+            statistic_ids = []
+            for act in primary_activities:
+                schedule_date = datetime.now() + timedelta(hours=act.delay_in_hours)
+                statistic_ids.append((0, 0, {
+                    'activity_id': act.id,
+                    'schedule_date': schedule_date
+                }))
+            for record in CampaignModel.search(domain):
+                Workitem.create({
+                    'campaign_id': campaign.id,
+                    'res_id': record.id,
+                    'statistic_ids': statistic_ids,
+                    'test_mode': False
+                })
 
-                for activity_id in activity_ids:
-                    wi_vals['activity_id'] = activity_id
-                    Workitems.create(wi_vals)
+    def process_workitems(self):
+        """This will process workitems based on schedule date"""
+        if not self.ids:
+            self = self.search([('state', '=', 'running')])  # If called from cron
 
-            segment.write({'sync_last_date': action_date})
-        Workitems.process_all(campaigns.ids)
-        return True
+        WorkitemStatistics = self.env['marketing.automation.statistics']
+        for campaign in self:
+            if campaign.state != 'running':  # for manual sync button
+                continue
+            WorkitemStatistics.search([
+                ('schedule_date', '<=', fields.Datetime.now()),
+                ('state', '=', 'scheduled'),
+                ('workitem_id.campaign_id', '=', campaign.id),
+                ('workitem_id.state', '=', 'running')
+            ]).process_workitems_stats()
 
 
 class MarketingAutomationActivity(models.Model):
-    _name = "marketing.automation.activity"
-    _order = "name"
-    _description = "Campaign Activity"
+    _name = 'marketing.automation.activity'
+    _description = 'Marketing Automation Activity'
+    _order = 'delay_in_hours'
 
-    name = fields.Char('Name', required=True)
-    campaign_id = fields.Many2one('marketing.automation', 'Campaign', required=True, ondelete='cascade', index=True)
-    object_id = fields.Many2one('ir.model', related='campaign_id.object_id', string='Object', readonly=True)
-    start = fields.Boolean('Start', help="This activity is launched when the campaign starts.", index=True)
-    condition = fields.Text('Condition', required=True, default="True",
-        help="Python expression to decide whether the activity can be executed, otherwise it will be deleted or cancelled."
-        "The expression may use the following [browsable] variables:\n"
-        "   - activity: the campaign activity\n"
-        "   - workitem: the campaign workitem\n"
-        "   - resource: the resource object this campaign item represents\n"
-        "   - transitions: list of campaign transitions outgoing from this activity\n"
-        "...- re: Python regular expression module")
-    action_type = fields.Selection([
-        ('email', 'Email'),
-        ('report', 'Report'),
-        ('action', 'Custom Action'),
-    ], 'Type', required=True, oldname="type", default="email",
-        help="The type of action to execute when an item enters this activity, such as:\n"
-             "- Email: send an email using a predefined email template \n"
-             "- Report: print an existing Report defined on the resource item and save it into a specific directory \n"
-             "- Custom Action: execute a predefined action, e.g. to modify the fields of the resource record")
-    email_template_id = fields.Many2one('mail.template', "Email Template", help='The email to send when this activity is activated')
-    report_id = fields.Many2one('ir.actions.report', "Report", help='The report to generate when this activity is activated')
-    server_action_id = fields.Many2one('ir.actions.server', string='Action',
-        help="The action to perform when this activity is activated")
-    to_ids = fields.One2many('marketing.automation.transition', 'activity_from_id', 'Next Activities')
-    from_ids = fields.One2many('marketing.automation.transition', 'activity_to_id', 'Previous Activities')
-    variable_cost = fields.Float('Variable Cost', digits=dp.get_precision('Product Price'),
-        help="Set a variable cost if you consider that every campaign item that has reached this point has entailed a "
-             "certain cost. You can get cost statistics in the Reporting section")
-    revenue = fields.Float('Revenue', digits=0,
-        help="Set an expected revenue if you consider that every campaign item that has reached this point has generated "
-             "a certain revenue. You can get revenue statistics in the Reporting section")
-    signal = fields.Char('Signal',
-        help="An activity with a signal can be called programmatically. Be careful, the workitem is always created when "
-             "a signal is sent")
-    keep_if_condition_not_met = fields.Boolean("Don't Delete Workitems",
-        help="By activating this option, workitems that aren't executed because the condition is not met are marked as "
-             "cancelled instead of being deleted.")
+    _inherits = {'utm.source': 'utm_source_id'}
+
+    # NOTE: another possible activities are SMS, eject from workflow, send a survey
+    @api.model
+    def _get_activity_type(self):
+        return [('email', 'Email'), ('action', 'Server Action')]
 
     @api.model
-    def search(self, args, offset=0, limit=None, order=None, count=False):
-        if 'segment_id' in self.env.context:
-            return self.env['marketing.automation.segment'].browse(self.env.context['segment_id']).campaign_id.activity_ids
-        return super(MarketingAutomationActivity, self).search(args, offset, limit, order, count)
+    def _default_graph_data(self):
+        """Setting default data for empty graph
+            > Problem is there is no graph data when user create new activity from kanban
+              becasue this field is not computed so no data for graph
+        """
+        base = date.today() + timedelta(days=-14)
+        date_range = [base + timedelta(days=d) for d in range(0, 15)]
+        success = []
+        rejected = []
+        for i in date_range:
+            x = i.strftime('%d %b')
+            success.append({'x': x, 'y': 0})
+            rejected.append({'x': x, 'y': 0})
+        return json.dumps([
+                {'values': success, 'key': _('Success'), 'area': True, 'color': '#21B799'},
+                {'values': rejected, 'key': _('Rejected'), 'area': True, 'color': '#d9534f'}
+            ])
 
-    @api.multi
-    def _process_wi_email(self, workitem):
+    campaign_id = fields.Many2one('marketing.automation.campaign', string='Campaign', ondelete='cascade')
+    interval_number = fields.Integer(string='Send after', required=True, default=1)
+    interval_type = fields.Selection([('hours', 'Hours'), ('days', 'Days'), ('weeks', 'Weeks'), ('months', 'Months')], default='hours', required=True)
+    delay_in_hours = fields.Integer(compute='_compute_delay_in_hours', store=True)
+    interval_update_date = fields.Datetime(compute='_compute_delay_in_hours', store=True)  # This is used to notify is there any change in running campaign
+    condition = fields.Char(help='Activity will only performed if record satisfy this condition', default=[])
+    model_id = fields.Many2one('ir.model', related='campaign_id.model_id', string='Object')
+    model_name = fields.Char(related='campaign_id.model_id.model', string='Model Name')
+    activity_type = fields.Selection('_get_activity_type', required=True, default='email')
+    mass_mailing_id = fields.Many2one('mail.mass_mailing', string='Email Template')
+    server_action_id = fields.Many2one('ir.actions.server', string='Server Action')
+    utm_source_id = fields.Many2one('utm.source', 'Source', required=True, ondelete='cascade')
+
+    # Related to parent activity
+    parent_id = fields.Many2one('marketing.automation.activity', string='Activity', ondelete='cascade')
+    child_ids = fields.One2many('marketing.automation.activity', 'parent_id', string='Child Activities')
+    trigger_type = fields.Selection([
+        ('begin', 'beginning of campaign'),
+        ('act', 'another activity'),
+        ('mail_open', 'Mail: opened'),
+        ('mail_not_open', 'Mail: not opened'),
+        ('mail_reply', 'Mail: replied'),
+        ('mail_not_reply', 'Mail: not replied'),
+        ('mail_click', 'Mail: clicked'),
+        ('mail_not_click', 'Mail: not clicked'),
+        ('mail_bounce', 'Mail: bounced')
+    ], default='begin', required=True)
+
+    # For statistics
+    processed = fields.Integer(compute='_compute_statistics')
+    rejected = fields.Integer(compute='_compute_statistics')
+    total_sent = fields.Integer(compute='_compute_statistics')
+    total_click = fields.Integer(compute='_compute_statistics')
+    total_open = fields.Integer(compute='_compute_statistics')
+    total_reply = fields.Integer(compute='_compute_statistics')
+    total_bounce = fields.Integer(compute='_compute_statistics')
+    pie_chart_data = fields.Char(compute='_compute_statistics', default=lambda self: self._default_graph_data())
+
+    @api.depends('interval_number', 'interval_type', 'trigger_type')
+    def _compute_delay_in_hours(self):
+        multi = {'hours': 1, 'days': 24, 'weeks': 7*24, 'months': 30*24}
+        for activity in self:
+            activity.delay_in_hours = activity.interval_number * multi[activity.interval_type]
+            activity.interval_update_date = fields.Datetime.now()
+
+    def _compute_statistics(self):
+        """ Compute statistics of the marketing automation activity """
+        if not self.ids:
+            return
+
+        act_data = dict([(act.id, {}) for act in self])
+        for row in self._get_full_statistics():
+            act_data[row.pop('activity_id')].update(row)
+        for act_id, graph_data in self._get_graph_statistics().items():
+            act_data[act_id]['pie_chart_data'] = json.dumps(graph_data)
+        for act in self:
+            act.update(act_data[act.id])
+
+    @api.constrains('parent_id')
+    def _check_parent_id(self):
+        for activity in self:
+            if not activity._check_recursion():
+                raise ValidationError(_('Error! You can\'t create recursive hierarchy of Activity.'))
+
+    def _get_full_statistics(self):
+        self.env.cr.execute("""
+            SELECT
+                stat.activity_id,
+                COUNT(CASE WHEN stat.mail_bounce is false THEN 1 ELSE null END) AS total_sent,
+                COUNT(CASE WHEN stat.mail_click is true THEN 1 ELSE null END) AS total_click,
+                COUNT(CASE WHEN stat.mail_reply is true THEN 1 ELSE null END) AS total_reply,
+                COUNT(CASE WHEN stat.mail_open is true THEN 1 ELSE null END) AS total_open,
+                COUNT(CASE WHEN stat.mail_bounce is true THEN 1 ELSE null END) AS total_bounce,
+                COUNT(CASE WHEN stat.state = 'processed' THEN 1 ELSE null END) AS processed,
+                COUNT(CASE WHEN stat.state = 'rejected' THEN 1 ELSE null END) AS rejected
+            FROM
+                marketing_automation_statistics AS stat
+            JOIN
+                marketing_automation_workitem AS wi
+                ON (stat.workitem_id = wi.id)
+            WHERE
+                stat.activity_id IN %s AND wi.test_mode = False
+            GROUP BY
+                stat.activity_id;
+        """, (tuple(self.ids), ))
+
+        return self.env.cr.dictfetchall()
+
+    def _get_graph_statistics(self):
+        past_date = (datetime.now() + timedelta(days=-14)).strftime('%Y-%m-%d 00:00:00')
+        stat_map = {}
+        base = date.today() + timedelta(days=-14)
+        date_range = [base + timedelta(days=d) for d in range(0, 15)]
+
+        self.env.cr.execute("""
+            SELECT
+                act.id AS act_id,
+                stat.schedule_date::date AS dt,
+                count(*) AS total,
+                stat.state
+            FROM
+                marketing_automation_statistics AS stat
+            JOIN
+                marketing_automation_workitem AS wi
+                ON (stat.workitem_id = wi.id)
+            JOIN
+                marketing_automation_activity AS act
+                ON (act.id = stat.activity_id)
+            WHERE act.id IN %s AND stat.schedule_date >= %s AND wi.test_mode = False
+            GROUP BY act.id , dt, stat.state
+            ORDER BY dt;
+        """, (tuple(self.ids), past_date))
+
+        for stat in self.env.cr.dictfetchall():
+            stat_map[(stat['act_id'], stat['dt'], stat['state'])] = stat['total']
+
+        graph_data = {}
+        for act in self:
+            success = []
+            rejected = []
+            for i in date_range:
+                x = i.strftime('%d %b')
+                success.append({
+                    'x': x,
+                    'y': stat_map.get((act.id, i.strftime('%Y-%m-%d'), 'processed'), 0)
+                })
+                rejected.append({
+                    'x': x,
+                    'y': stat_map.get((act.id, i.strftime('%Y-%m-%d'), 'rejected'), 0)
+                })
+            graph_data[act.id] = [
+                {'values': success, 'key': _('Success'), 'area': True, 'color': '#21B799'},
+                {'values': rejected, 'key': _('Rejected'), 'area': True, 'color': '#d9534f'}
+            ]
+        return graph_data
+
+    def _perform_activity(self, workitems_stats):
+        """ Perform current activity on given workitems_stats.
+            This will only performed on those workitems_stats which are pass activity conditions
+            :param workitems_stats: recordset of workitems_stats going to process by this activity
+        """
         self.ensure_one()
-        return self.email_template_id.send_mail(workitem.res_id)
 
-    @api.multi
-    def _process_wi_report(self, workitem):
-        self.ensure_one()
-        return self.report_id.render(workitem.res_id)
+        # Separate workitems based on condition (domain)
+        condition = []
+        permitted_stat = workitems_stats
+        rejected_stats = False
+        deleted_stats = False
+        if self.condition:
+            condition = safe_eval(self.condition)
+        if condition:
+            allowd_ids = self.env[self.model_name].search(condition).ids
+            permitted_stat = workitems_stats.filtered(lambda w: w.workitem_id.res_id in allowd_ids)
+            rejected_stats = workitems_stats.filtered(lambda w: w.workitem_id.res_id not in allowd_ids)
 
-    @api.multi
-    def _process_wi_action(self, workitem):
-        self.ensure_one()
-        return self.server_action_id.run()
+        # Filter deleted records
+        if permitted_stat:
+            existing_ids = self.env[self.model_name].search([('id', 'in', permitted_stat.mapped('workitem_id.res_id'))]).ids
+            deleted_stats = permitted_stat.filtered(lambda w: w.workitem_id.res_id not in existing_ids)
+            permitted_stat = permitted_stat.filtered(lambda w: w.workitem_id.res_id in existing_ids)
 
-    @api.multi
-    def process(self, workitem):
-        self.ensure_one()
-        method = '_process_wi_%s' % (self.action_type,)
-        action = getattr(self, method, None)
-        if not action:
-            raise NotImplementedError('Method %r is not implemented on %r object.' % (method, self._name))
-        return action(workitem)
+        # Process permitted workitems
+        method = '_process_with_%s' % (self.activity_type)
+        activity_def = getattr(self, method, None)
 
+        if not activity_def:
+            _logger.error('Method %s is not implemented on %s object.' % (method, self._name))
+            return
+        if permitted_stat:
+            activity_def(permitted_stat)
 
-class MarketingAutomationTransition(models.Model):
-    _name = "marketing.automation.transition"
-    _description = "Campaign Transition"
-
-    _interval_units = [
-        ('hours', 'Hour(s)'),
-        ('days', 'Day(s)'),
-        ('months', 'Month(s)'),
-        ('years', 'Year(s)'),
-    ]
-
-    name = fields.Char(compute='_compute_name', string='Name')
-    activity_from_id = fields.Many2one('marketing.automation.activity', 'Previous Activity', index=1, required=True, ondelete="cascade")
-    activity_to_id = fields.Many2one('marketing.automation.activity', 'Next Activity', required=True, ondelete="cascade")
-    interval_nbr = fields.Integer('Interval Value', required=True, default=1)
-    interval_type = fields.Selection(_interval_units, 'Interval Unit', required=True, default='days')
-    trigger = fields.Selection([
-        ('auto', 'Automatic'),
-        ('time', 'Time'),
-        ('cosmetic', 'Cosmetic'),  # fake plastic transition
-        ], 'Trigger', required=True, default='time',
-        help="How is the destination workitem triggered")
-
-    _sql_constraints = [
-        ('interval_positive', 'CHECK(interval_nbr >= 0)', 'The interval must be positive or zero')
-    ]
-
-    def _compute_name(self):
-        # name formatters that depend on trigger
-        formatters = {
-            'auto': _('Automatic transition'),
-            'time': _('After %(interval_nbr)d %(interval_type)s'),
-            'cosmetic': _('Cosmetic'),
-        }
-        # get the translations of the values of selection field 'interval_type'
-        model_fields = self.fields_get(['interval_type'])
-        interval_type_selection = dict(model_fields['interval_type']['selection'])
-
-        for transition in self:
-            values = {
-                'interval_nbr': transition.interval_nbr,
-                'interval_type': interval_type_selection.get(transition.interval_type, ''),
+        # Process rejected workitems
+        if rejected_stats:
+            vals = {
+                'state': 'rejected',
+                'error_msg': _('Rejected by activity filter')
             }
-            transition.name = formatters[transition.trigger] % values
+            rejected_stats.write(vals)
 
-    @api.constrains('activity_from_id', 'activity_to_id')
-    def _check_campaign(self):
-        if self.filtered(lambda transition: transition.activity_from_id.campaign_id != transition.activity_to_id.campaign_id):
-            return ValidationError(_('The To/From Activity of transition must be of the same Campaign'))
+        # Process deleted workitems
+        if deleted_stats:
+            vals = {
+                'state': 'error',
+                'error_msg': _('Record is deleted')
+            }
+            deleted_stats.write(vals)
 
-    def _delta(self):
-        self.ensure_one()
-        if self.trigger != 'time':
-            raise ValueError('Delta is only relevant for timed transition.')
-        return relativedelta(**{str(self.interval_type): self.interval_nbr})
+    def _process_with_action(self, workitem_stats):
+        """ Responsible for running server actions.
+            :param  workitems_stats: marketing.automation.statistics recordset
+        """
+        if not self.server_action_id:
+            return
+        error_ids = []
+        for stat in workitem_stats:
+            # execute server actions
+            ctx = {'active_model': self.model_name, 'active_id': stat.workitem_id.res_id}
+            try:
+                if not stat.workitem_id.test_mode:
+                    self.server_action_id.with_context(**ctx).run()
+                stat.write({
+                    'state': 'processed',
+                    'schedule_date': fields.Datetime.now()
+                })
+            except Exception as e:
+                _logger.warning('Action activity "%s" has Error: %s', self.name, e.message)
+                stat.write({
+                    'state': 'error',
+                    'schedule_date': fields.Datetime.now(),
+                    'error_msg': _('Exception in server action')
+                })
+                error_ids.append(stat.id)
+
+        if error_ids:
+            workitem_stats = workitem_stats.filtered(lambda stat: stat.id not in error_ids)
+        self._genetate_next_stats(workitem_stats)
+
+    def _process_with_email(self, workitem_stats):
+        """ Responsible for sending emails.
+            :param  workitems_stats: marketing.automation.statistics recordset
+        """
+        try:
+            self.mass_mailing_id.send_mail_automation(self, workitem_stats)
+        except Exception as e:
+            _logger.warning('Mail activity "%s" has Error: %s', self.name, e.message)
+            workitem_stats.write({
+                'state': 'error',
+                'error_msg': _('Exception in mail template')
+            })
+            return
+
+        workitem_stats.write({
+            'state': 'processed',
+            'schedule_date': fields.Datetime.now()
+        })
+        self._genetate_next_stats(workitem_stats)
+
+    def _genetate_next_stats(self, workitems_stats):
+        """Generate child statistics based and compute it's schedule date
+            > schedule_date is not computed for mail_open, mail_click, mail_reply, mail_bounce.
+            > It will be calculated after getting mail response
+
+            :param  workitems_stats: marketing.automation.statistics recordset
+        """
+        if self.child_ids:
+            WorkitemStatistics = self.env['marketing.automation.statistics']
+            for act in self.child_ids:
+                trigger_type = act.trigger_type
+                for stat in workitems_stats:
+                    vals = {
+                        'parent_id': stat.id,
+                        'workitem_id': stat.workitem_id.id,
+                        'activity_id': act.id
+                    }
+                    if trigger_type in ['act', 'mail_not_open', 'mail_not_click', 'mail_not_reply']:
+                        vals['schedule_date'] = datetime.strptime(stat.schedule_date, DEFAULT_SERVER_DATETIME_FORMAT) + timedelta(hours=act.delay_in_hours)
+                    WorkitemStatistics.create(vals)
 
 
 class MarketingAutomationWorkitem(models.Model):
-    _name = "marketing.automation.workitem"
-    _description = "Campaign Workitem"
-
-    segment_id = fields.Many2one('marketing.automation.segment', 'Segment', readonly=True)
-    activity_id = fields.Many2one('marketing.automation.activity', 'Activity', required=True, readonly=True)
-    campaign_id = fields.Many2one('marketing.automation', related='activity_id.campaign_id', string='Campaign', readonly=True, store=True)
-    object_id = fields.Many2one('ir.model', related='activity_id.campaign_id.object_id', string='Resource', index=1, readonly=True, store=True)
-    res_id = fields.Integer('Resource ID', index=1, readonly=True)
-    res_name = fields.Char(compute='_compute_res_name', string='Resource Name', search='_search_res_name')
-    date = fields.Datetime('Execution Date', readonly=True, default=False,
-        help='If date is not set, this workitem has to be run manually')
-    partner_id = fields.Many2one('res.partner', 'Partner', index=1, readonly=True)
-    state = fields.Selection([
-        ('todo', 'To Do'),
-        ('cancelled', 'Cancelled'),
-        ('exception', 'Exception'),
-        ('done', 'Done'),
-        ], 'Status', readonly=True, copy=False, default='todo')
-    error_msg = fields.Text('Error Message', readonly=True)
-
-    def _compute_res_name(self):
-        for workitem in self:
-            proxy = self.env[workitem.object_id.model]
-            record = proxy.browse(workitem.res_id)
-            if not workitem.res_id or not record.exists():
-                workitem.res_name = '/'
-                continue
-            workitem.res_name = record.name_get()[0][1]
-
-    def _search_res_name(self, operator, operand):
-        """Returns a domain with ids of workitem whose `operator` matches  with the given `operand`"""
-        if not operand:
-            return []
-
-        condition_name = [None, operator, operand]
-
-        self.env.cr.execute("""
-            SELECT w.id, w.res_id, m.model
-            FROM marketing_automation_workitem w \
-            LEFT JOIN marketing_automation_activity a ON (a.id=w.activity_id)\
-            LEFT JOIN marketing_automation c ON (c.id=a.campaign_id)\
-            LEFT JOIN ir_model m ON (m.id=c.object_id)
-        """)
-        res = self.env.cr.fetchall()
-        workitem_map = {}
-        matching_workitems = []
-        for id, res_id, model in res:
-            workitem_map.setdefault(model, {}).setdefault(res_id, set()).add(id)
-        for model, id_map in pycompat.items(workitem_map):
-            Model = self.env[model]
-            condition_name[0] = Model._rec_name
-            condition = [('id', 'in', list(id_map)), condition_name]
-            for record in Model.search(condition):
-                matching_workitems.extend(id_map[record.id])
-        return [('id', 'in', list(set(matching_workitems)))]
-
-    @api.multi
-    def button_draft(self):
-        return self.filtered(lambda workitem: workitem.state in ('exception', 'cancelled')).write({'state': 'todo'})
-
-    @api.multi
-    def button_cancel(self):
-        return self.filtered(lambda workitem: workitem.state in ('todo', 'exception')).write({'state': 'cancelled'})
-
-    @api.multi
-    def _process_one(self):
-        self.ensure_one()
-        if self.state != 'todo':
-            return False
-
-        activity = self.activity_id
-        resource = self.env[self.object_id.model].browse(self.res_id)
-
-        eval_context = {
-            'activity': activity,
-            'workitem': self,
-            'object': resource,
-            'resource': resource,
-            'transitions': activity.to_ids,
-            're': re,
-        }
-        try:
-            condition = activity.condition
-            campaign_mode = self.campaign_id.mode
-            if condition:
-                if not safe_eval(condition, eval_context):
-                    if activity.keep_if_condition_not_met:
-                        self.write({'state': 'cancelled'})
-                    else:
-                        self.unlink()
-                    return
-            result = True
-            if campaign_mode in ('manual', 'active'):
-                result = activity.process(self)
-
-            values = {'state': 'done'}
-            if not self.date:
-                values['date'] = fields.Datetime.now()
-            self.write(values)
-
-            if result:
-                # process _chain
-                self.refresh()  # reload
-                execution_date = fields.Datetime.from_string(self.date)
-
-                for transition in activity.to_ids:
-                    if transition.trigger == 'cosmetic':
-                        continue
-                    launch_date = False
-                    if transition.trigger == 'auto':
-                        launch_date = execution_date
-                    elif transition.trigger == 'time':
-                        launch_date = execution_date + transition._delta()
-
-                    if launch_date:
-                        launch_date = fields.Datetime.to_string(launch_date)
-                    values = {
-                        'date': launch_date,
-                        'segment_id': self.segment_id.id,
-                        'activity_id': transition.activity_to_id.id,
-                        'partner_id': self.partner_id.id,
-                        'res_id': self.res_id,
-                        'state': 'todo',
-                    }
-                    workitem = self.create(values)
-
-                    # Now, depending on the trigger and the campaign mode
-                    # we know whether we must run the newly created workitem.
-                    #
-                    # rows = transition trigger \ colums = campaign mode
-                    #
-                    #           test    test_realtime     manual      normal (active)
-                    # time       Y            N             N           N
-                    # cosmetic   N            N             N           N
-                    # auto       Y            Y             N           Y
-                    #
-
-                    run = (transition.trigger == 'auto' and campaign_mode != 'manual') or (transition.trigger == 'time' and campaign_mode == 'test')
-                    if run:
-                        workitem._process_one()
-
-        except Exception:
-            tb = "".join(format_exception(*exc_info()))
-            self.write({'state': 'exception', 'error_msg': tb})
-
-    @api.multi
-    def process(self):
-        for workitem in self:
-            workitem._process_one()
-        return True
+    _name = 'marketing.automation.workitem'
+    _rec_name = 'resource_ref'
 
     @api.model
-    def process_all(self, camp_ids=None):
-        if camp_ids is None:
-            campaigns = self.env['marketing.automation'].search([('state', '=', 'running')])
-        else:
-            campaigns = self.env['marketing.automation'].browse(camp_ids)
-        for campaign in campaigns.filtered(lambda campaign: campaign.mode != 'manual'):
-            while True:
-                domain = [('campaign_id', '=', campaign.id), ('state', '=', 'todo'), ('date', '!=', False)]
-                if campaign.mode in ('test_realtime', 'active'):
-                    domain += [('date', '<=', fields.Datetime.now())]
-                workitems = self.search(domain)
-                if not workitems:
-                    break
-                workitems.process()
-        return True
+    def _target_model(self):
+        models = self.env['ir.model'].search([('field_id.name', '=', 'message_ids')])
+        return [(model.model, model.name) for model in models]
 
-    @api.multi
-    def preview(self):
-        self.ensure_one()
-        res = {}
-        if self.activity_id.action_type == 'email':
-            view_ref = self.env.ref('mail.email_template_preview_form')
-            res = {
-                'name': _('Email Preview'),
-                'view_type': 'form',
-                'view_mode': 'form,tree',
-                'res_model': 'email_template.preview',
-                'view_id': False,
-                'context': self.env.context,
-                'views': [(view_ref and view_ref.id or False, 'form')],
-                'type': 'ir.actions.act_window',
-                'target': 'new',
-                'context': "{'template_id': %d,'default_res_id': %d}" % (self.activity_id.email_template_id.id, self.res_id)
-            }
+    @api.model
+    def default_get(self, default_fields):
+        defaults = super(MarketingAutomationWorkitem, self).default_get(default_fields)
+        if defaults.get('campaign_id'):
+            model_name = self.env['marketing.automation.campaign'].browse(defaults['campaign_id']).model_name
+            resource = self.env[model_name].search([], limit=1)
+            if resource:
+                defaults['resource_ref'] = '%s,%s' % (model_name, resource.id)
+        return defaults
 
-        elif self.activity_id.action_type == 'report':
-            datas = {
-                'ids': [self.res_id],
-                'model': self.object_id.model
-            }
-            res = {
-                'type': 'ir.actions.report',
-                'report_name': self.activity_id.report_id.report_name,
-                'datas': datas,
-            }
-        else:
-            raise UserError(_('The current step for this item has no email or report to preview.'))
+    campaign_id = fields.Many2one('marketing.automation.campaign', string='Campaign', ondelete='cascade')
+    model_id = fields.Many2one('ir.model', related='campaign_id.model_id', string='Object')
+    model_name = fields.Char(related='campaign_id.model_id.model', store=True)
+    statistic_ids = fields.One2many('marketing.automation.statistics', 'workitem_id', string='Actions')
+    res_id = fields.Integer()
+    state = fields.Selection([('running', 'Running'), ('completed', 'Completed')], default='running')
+    test_mode = fields.Boolean(default=True)
+    resource_ref = fields.Reference(selection='_target_model', compute='_compute_resource_ref', inverse='_inverse_resource_ref')
+    test_email = fields.Char('Send Mails To')
+
+    def _compute_resource_ref(self):
+        for wi in self:
+            wi.resource_ref = '%s,%s' % (wi.model_name, wi.res_id or 0)
+
+    def _inverse_resource_ref(self):
+        for wi in self:
+            wi.res_id = wi.resource_ref.id
+
+    @api.model
+    def create(self, vals):
+        res = super(MarketingAutomationWorkitem, self).create(vals)
+        if res.test_mode and not res.statistic_ids:
+            primary_activities = res.campaign_id.activity_ids.filtered(lambda act: act.trigger_type == 'begin')
+            statistic_ids = []
+            for act in primary_activities:
+                schedule_date = datetime.now() + timedelta(hours=act.delay_in_hours)
+                statistic_ids.append((0, 0, {
+                    'activity_id': act.id,
+                    'schedule_date': schedule_date
+                }))
+            res.statistic_ids = statistic_ids
         return res
+
+    @api.model
+    def search(self, args, offset=0, limit=None, order=None, count=False):
+        if self._context.get('name_update', True):
+            args = self._get_implicit_domain(args)
+        return super(MarketingAutomationWorkitem, self).search(args, offset, limit, order, count=count)
+
+    def _get_implicit_domain(self, domain):
+        """With this user can search by name in any model"""
+        if not domain:
+            return domain
+        replace_domain = []
+        search_domain = []
+        for d in domain:
+            if d[0] == 'display_name':
+                replace_domain.append(d)
+                search_domain.append((1, '=', 1))
+            else:
+                search_domain.append(d)
+        if replace_domain:
+            records = self.with_context(name_update=False).search(search_domain)
+            model_dict = defaultdict(list)
+            domain_to_replace = {}
+            for rec in records:
+                model_dict[rec.model_name].append(rec.res_id)
+            for d in replace_domain:
+                and_domain = []
+                for model_name, rec_ids in model_dict.items():
+                    model_obj = self.env[model_name]
+                    ns_recs = model_obj.name_search(name=d[2], args=[('id', 'in', rec_ids)], operator=d[1], limit=None)
+                    and_domain.append(['&', ('model_name', '=', model_name), ('res_id', 'in', [r[0] for r in ns_recs])])
+                domain_to_replace[tuple(d)] = expression.OR(and_domain)
+            implicit_domain = []
+            for d in domain:
+                if d[0] == 'display_name':
+                    implicit_domain.extend(domain_to_replace[tuple(d)])
+                else:
+                    implicit_domain.append(d)
+            return implicit_domain
+        return domain
+
+    def mark_as_completed(self):
+        """Manually mark as a completed. It will cancel all child scheduled stat"""
+        for wi in self:
+            wi.state = 'completed'
+            wi.statistic_ids.filtered(lambda stat: stat.state == 'scheduled').write({
+                'state': 'cancelled',
+                'schedule_date': fields.Datetime.now(),
+                'error_msg': _('Marked as completed')
+            })
+
+
+class MarketingAutomationStatistics(models.Model):
+    _name = 'marketing.automation.statistics'
+
+    state = fields.Selection([
+        ('scheduled', 'Scheduled'),
+        ('processed', 'Processed'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+        ('error', 'Error')], default='scheduled')
+    activity_id = fields.Many2one('marketing.automation.activity', string='Activity', ondelete='cascade')
+    activity_type = fields.Selection(related='activity_id.activity_type')
+    workitem_id = fields.Many2one('marketing.automation.workitem', string='Workitem', ondelete='cascade')
+    error_msg = fields.Char()
+    schedule_date = fields.Datetime()
+    parent_id = fields.Many2one('marketing.automation.statistics', string='Parent Activity Statistics', ondelete='cascade')
+    trigger_type = fields.Selection(related='activity_id.trigger_type')
+
+    # mail statistics
+    mail_click = fields.Boolean()
+    mail_click_date = fields.Datetime()
+    mail_reply = fields.Boolean()
+    mail_reply_date = fields.Datetime()
+    mail_open = fields.Boolean()
+    mail_open_date = fields.Datetime()
+    mail_bounce = fields.Boolean()
+    mail_bounce_date = fields.Datetime()
+
+    def process_workitems_stats(self):
+        """This will generate workitem batches per activity and process activities with workitems"""
+        if not self.ids:
+            return
+        workitem_batch = defaultdict(lambda: self.env['marketing.automation.statistics'])
+        for workitem_stat in self:
+            activity = workitem_stat.activity_id
+            workitem_batch[activity.id] += workitem_stat
+
+        all_acts = self[0].workitem_id.campaign_id.activity_ids  # All workitem is from same activity so used self[0].campaign_id
+
+        for act in all_acts:
+            workitems_stats = workitem_batch.get(act.id, False)
+            if workitems_stats:
+                act._perform_activity(workitems_stats)
+        self._check_completed()
+
+    def cancel_workitems_stats(self):
+        for workitem_stat in self:
+            workitem_stat.write({'state': 'cancelled', 'schedule_date': fields.Datetime.now()})
+        self._check_completed()
+
+    # NOTE: Try to do it with thread so actual redirect or link tracker image get response without send_mail delay (if it getting slow)
+    def process_mail_response(self, action):
+        """Process action response from mail which are sent via mass_mailing. Its main work is
+               > calculate schedule_date for reply, open, click action
+               > cancel valid negative stats e.g. if receive mail_click all mail_not_click sibling are going to canceled
+               > if mail is bounced all children except mail_bounce are going to canceled
+
+            :param string action: possible values are mail_reply, mail_open, mail_bounce, mail_click
+        """
+        self.ensure_one()
+        if self.workitem_id.campaign_id.state not in ['draft', 'running']:
+            return
+        # act_to_cancel for cancelled activity which are never going to perform
+        # e.g. Once mail is opened mail_not_open actions are useless
+        error_msgs = {
+            'mail_not_reply': _('This activity is cancelled because parent mail has reply'),
+            'mail_not_click': _('This activity is cancelled because parent mail is clicked'),
+            'mail_not_open': _('This activity is cancelled because parent mail is opened'),
+            'mail_bounce': _('This activity is cancelled because parent mail is bounced')
+        }
+
+        child_stats = self.workitem_id.statistic_ids.filtered(lambda stat: stat.parent_id == self and stat.state == 'scheduled')
+        if action in ['mail_reply', 'mail_click', 'mail_open'] and not self[action]:
+            self.write({action: True, action+'_date': fields.Datetime.now()})
+            for stat in child_stats.filtered(lambda stat: stat.activity_id.trigger_type == action):
+                if stat.activity_id.delay_in_hours == 0:
+                    stat.process_workitems_stats()
+                else:
+                    stat.write({
+                        'schedule_date': datetime.now() + timedelta(hours=stat.activity_id.delay_in_hours)
+                    })
+            opposite_trigger = action.replace('_', '_not_')
+            child_stats.filtered(lambda stat: stat.activity_id.trigger_type == opposite_trigger).write({
+                'schedule_date': fields.Datetime.now(),
+                'error_msg': error_msgs[opposite_trigger],
+                'state': 'cancelled'
+            })
+            # Some time we got reply and click but mail is still not opened (because tracker img is blocked user mail client)
+            if action != 'mail_open' and not self.mail_open:
+                self.write({'mail_open': True, 'mail_open_date': fields.Datetime.now()})
+                for stat in child_stats.filtered(lambda stat: stat.activity_id.trigger_type == 'mail_open'):
+                    if stat.activity_id.delay_in_hours == 0:
+                        stat.process_workitems_stats()
+                    else:
+                        stat.write({
+                            'schedule_date': datetime.now() + timedelta(hours=stat.activity_id.delay_in_hours)
+                        })
+                child_stats.filtered(lambda stat: stat.activity_id.trigger_type == 'mail_not_open').write({
+                    'schedule_date': fields.Datetime.now(),
+                    'error_msg': error_msgs['mail_not_open'],
+                    'state': 'cancelled'
+                })
+        elif action == 'mail_bounce':
+            self.write({'mail_bounce': True, 'mail_bounce_date': fields.Datetime.now()})
+            child_stats.filtered(lambda stat: stat.activity_id.trigger_type != 'mail_bounce').write({
+                'schedule_date': fields.Datetime.now(),
+                'error_msg': error_msgs['mail_bounce'],
+                'state': 'cancelled'
+            })
+
+    def _recompute_schedule_date(self):
+        """Recompute schedule dates. Called from sync_outdated"""
+        for stat in self:
+            trigger_type = stat.activity_id.trigger_type
+            if trigger_type == 'begin':
+                stat.schedule_date = datetime.strptime(stat.workitem_id.create_date, DEFAULT_SERVER_DATETIME_FORMAT) + timedelta(hours=stat.activity_id.delay_in_hours)
+            elif trigger_type in ['act', 'mail_not_open', 'mail_not_click', 'mail_not_reply']and stat.parent_id:
+                stat.schedule_date = datetime.strptime(stat.parent_id.schedule_date, DEFAULT_SERVER_DATETIME_FORMAT) + timedelta(hours=stat.activity_id.delay_in_hours)
+            elif stat.parent_id:
+                if stat.parent_id[trigger_type]:
+                    stat.schedule_date = datetime.strptime(stat.parent_id[trigger_type+'_date'], DEFAULT_SERVER_DATETIME_FORMAT) + timedelta(hours=stat.activity_id.delay_in_hours)
+                else:
+                    stat.schedule_date = False
+
+    def _check_completed(self):
+        """Mark woritem as a complete. It can't be done in batch because user action trigger type don't have fixed time"""
+        for workitem_stat in self:
+            if not workitem_stat.workitem_id.statistic_ids.filtered(lambda stat: stat.state == 'scheduled'):
+                workitem_stat.workitem_id.write({'state': 'completed'})

@@ -1,29 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <data noupdate="1">
+<odoo noupdate="1">
 
-    <!-- Cron -->
-        <record model="ir.cron" id="ir_cron_marketing_automation_every_hour">
-            <field name="name">Marketing Campaign: Campaign workitems processing</field>
-            <field name="model_id" ref="model_marketing_automation_workitem"/>
-            <field name="state">code</field>
-            <field name="code">model.process_all()</field>
-            <field name="interval_number">1</field>
-            <field name="interval_type">hours</field>
-            <field name="numbercall">-1</field>
-            <field name="doall" eval="False"/>
-        </record>
+    <record id="ir_cron_marketing_automation_sync_target" model="ir.cron">
+        <field name="name">Marketing Automation: Target Sync</field>
+        <field name="model_id" ref="model_marketing_automation_campaign" />
+        <field name="state">code</field>
+        <field name="code">model.synchronize_target()</field>
+        <field name="interval_number">12</field>
+        <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
+    </record>
 
-        <record model="ir.cron" id="ir_cron_marketing_automation_every_day">
-            <field name="name">Marketing Campaign: Segment Sync</field>
-            <field name="model_id" ref="model_marketing_automation_segment"/>
-            <field name="state">code</field>
-            <field name="code">model.process_segment()</field>
-            <field name="interval_number">1</field>
-            <field name="interval_type">days</field><!-- it s every day -->
-            <field name="numbercall">-1</field>
-            <field name="doall" eval="False"/>
-        </record>
+    <record id="ir_cron_marketing_automation_process record" model="ir.cron">
+        <field name="name">Marketing Automation: Process Records</field>
+        <field name="model_id" ref="model_marketing_automation_campaign" />
+        <field name="state">code</field>
+        <field name="code">model.process_workitems()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
+    </record>
 
-    </data>
 </odoo>
