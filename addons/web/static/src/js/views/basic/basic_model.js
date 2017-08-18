@@ -2747,6 +2747,7 @@ var BasicModel = AbstractModel.extend({
         var fields = _.extend({
             display_name: {type: 'char'},
             id: {type: 'integer'},
+            __last_update: {type: 'datetime'},
         }, params.fields);
 
         var dataPoint = {
