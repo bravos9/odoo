@@ -22,8 +22,8 @@ _intervalTypes = {
 }
 
 
-class MarketingCampaign(models.Model):
-    _name = "marketing.campaign"
+class MarketingAutomation(models.Model):
+    _name = "marketing.automation"
     _description = "Marketing Campaign"
 
     name = fields.Char('Name', required=True)
@@ -62,12 +62,12 @@ class MarketingCampaign(models.Model):
         ('cancelled', 'Cancelled'),
         ('done', 'Done')
         ], 'Status', copy=False, default="draft")
-    activity_ids = fields.One2many('marketing.campaign.activity', 'campaign_id', 'Activities')
+    activity_ids = fields.One2many('marketing.automation.activity', 'campaign_id', 'Activities')
     fixed_cost = fields.Float('Fixed Cost',
         help="Fixed cost for running this campaign. You may also specify variable cost and revenue on each "
              "campaign activity. Cost and Revenue statistics are included in Campaign Reporting.",
         digits=dp.get_precision('Product Price'))
-    segment_ids = fields.One2many('marketing.campaign.segment', 'campaign_id', 'Segments', readonly=False)
+    segment_ids = fields.One2many('marketing.automation.segment', 'campaign_id', 'Segments', readonly=False)
     segments_count = fields.Integer(compute='_compute_segments_count', string='Segments')
 
     @api.multi
@@ -147,16 +147,16 @@ class MarketingCampaign(models.Model):
                         ('res_id', 'in', similar_res_ids.ids),
                         ('campaign_id', '=', self.id)
                     ]
-        return self.env['marketing.campaign.workitem'].search(duplicate_workitem_domain)
+        return self.env['marketing.automation.workitem'].search(duplicate_workitem_domain)
 
 
-class MarketingCampaignSegment(models.Model):
-    _name = "marketing.campaign.segment"
+class MarketingAutomationSegment(models.Model):
+    _name = "marketing.automation.segment"
     _description = "Campaign Segment"
     _order = "name"
 
     name = fields.Char('Name', required=True)
-    campaign_id = fields.Many2one('marketing.campaign', 'Campaign', required=True, index=True, ondelete="cascade")
+    campaign_id = fields.Many2one('marketing.automation', 'Campaign', required=True, index=True, ondelete="cascade")
     object_id = fields.Many2one('ir.model', related='campaign_id.object_id', string='Resource')
     ir_filter_id = fields.Many2one('ir.filters', 'Filter', ondelete="restrict",
         domain=lambda self: [('model_id', '=', self.object_id._name)],
@@ -188,7 +188,7 @@ class MarketingCampaignSegment(models.Model):
 
     def _compute_date_next_sync(self):
         # next auto sync date is same for all segments
-        sync_job = self.sudo().env.ref('marketing_automation.ir_cron_marketing_campaign_every_day')
+        sync_job = self.sudo().env.ref('marketing_automation.ir_cron_marketing_automation_every_day')
         self.date_next_sync = sync_job and sync_job.nextcall or False
 
     @api.constrains('ir_filter_id', 'campaign_id')
@@ -221,7 +221,7 @@ class MarketingCampaignSegment(models.Model):
 
     @api.multi
     def state_done_set(self):
-        self.env["marketing.campaign.workitem"].search([
+        self.env["marketing.automation.workitem"].search([
             ('state', '=', 'todo'),
             ('segment_id', 'in', self.ids)
         ]).write({'state': 'cancelled'})
@@ -229,7 +229,7 @@ class MarketingCampaignSegment(models.Model):
 
     @api.multi
     def state_cancel_set(self):
-        self.env["marketing.campaign.workitem"].search([
+        self.env["marketing.automation.workitem"].search([
             ('state', '=', 'todo'),
             ('segment_id', 'in', self.ids)
         ]).write({'state': 'cancelled'})
@@ -237,13 +237,13 @@ class MarketingCampaignSegment(models.Model):
 
     @api.multi
     def process_segment(self):
-        Workitems = self.env['marketing.campaign.workitem']
-        Activities = self.env['marketing.campaign.activity']
+        Workitems = self.env['marketing.automation.workitem']
+        Activities = self.env['marketing.automation.activity']
         if not self:
             self = self.search([('state', '=', 'running')])
 
         action_date = fields.Datetime.now()
-        campaigns = self.env['marketing.campaign']
+        campaigns = self.env['marketing.automation']
         for segment in self:
             if segment.campaign_id.state != 'running':
                 continue
@@ -284,13 +284,13 @@ class MarketingCampaignSegment(models.Model):
         return True
 
 
-class MarketingCampaignActivity(models.Model):
-    _name = "marketing.campaign.activity"
+class MarketingAutomationActivity(models.Model):
+    _name = "marketing.automation.activity"
     _order = "name"
     _description = "Campaign Activity"
 
     name = fields.Char('Name', required=True)
-    campaign_id = fields.Many2one('marketing.campaign', 'Campaign', required=True, ondelete='cascade', index=True)
+    campaign_id = fields.Many2one('marketing.automation', 'Campaign', required=True, ondelete='cascade', index=True)
     object_id = fields.Many2one('ir.model', related='campaign_id.object_id', string='Object', readonly=True)
     start = fields.Boolean('Start', help="This activity is launched when the campaign starts.", index=True)
     condition = fields.Text('Condition', required=True, default="True",
@@ -314,8 +314,8 @@ class MarketingCampaignActivity(models.Model):
     report_id = fields.Many2one('ir.actions.report', "Report", help='The report to generate when this activity is activated')
     server_action_id = fields.Many2one('ir.actions.server', string='Action',
         help="The action to perform when this activity is activated")
-    to_ids = fields.One2many('marketing.campaign.transition', 'activity_from_id', 'Next Activities')
-    from_ids = fields.One2many('marketing.campaign.transition', 'activity_to_id', 'Previous Activities')
+    to_ids = fields.One2many('marketing.automation.transition', 'activity_from_id', 'Next Activities')
+    from_ids = fields.One2many('marketing.automation.transition', 'activity_to_id', 'Previous Activities')
     variable_cost = fields.Float('Variable Cost', digits=dp.get_precision('Product Price'),
         help="Set a variable cost if you consider that every campaign item that has reached this point has entailed a "
              "certain cost. You can get cost statistics in the Reporting section")
@@ -332,8 +332,8 @@ class MarketingCampaignActivity(models.Model):
     @api.model
     def search(self, args, offset=0, limit=None, order=None, count=False):
         if 'segment_id' in self.env.context:
-            return self.env['marketing.campaign.segment'].browse(self.env.context['segment_id']).campaign_id.activity_ids
-        return super(MarketingCampaignActivity, self).search(args, offset, limit, order, count)
+            return self.env['marketing.automation.segment'].browse(self.env.context['segment_id']).campaign_id.activity_ids
+        return super(MarketingAutomationActivity, self).search(args, offset, limit, order, count)
 
     @api.multi
     def _process_wi_email(self, workitem):
@@ -360,8 +360,8 @@ class MarketingCampaignActivity(models.Model):
         return action(workitem)
 
 
-class MarketingCampaignTransition(models.Model):
-    _name = "marketing.campaign.transition"
+class MarketingAutomationTransition(models.Model):
+    _name = "marketing.automation.transition"
     _description = "Campaign Transition"
 
     _interval_units = [
@@ -372,8 +372,8 @@ class MarketingCampaignTransition(models.Model):
     ]
 
     name = fields.Char(compute='_compute_name', string='Name')
-    activity_from_id = fields.Many2one('marketing.campaign.activity', 'Previous Activity', index=1, required=True, ondelete="cascade")
-    activity_to_id = fields.Many2one('marketing.campaign.activity', 'Next Activity', required=True, ondelete="cascade")
+    activity_from_id = fields.Many2one('marketing.automation.activity', 'Previous Activity', index=1, required=True, ondelete="cascade")
+    activity_to_id = fields.Many2one('marketing.automation.activity', 'Next Activity', required=True, ondelete="cascade")
     interval_nbr = fields.Integer('Interval Value', required=True, default=1)
     interval_type = fields.Selection(_interval_units, 'Interval Unit', required=True, default='days')
     trigger = fields.Selection([
@@ -417,13 +417,13 @@ class MarketingCampaignTransition(models.Model):
         return relativedelta(**{str(self.interval_type): self.interval_nbr})
 
 
-class MarketingCampaignWorkitem(models.Model):
-    _name = "marketing.campaign.workitem"
+class MarketingAutomationWorkitem(models.Model):
+    _name = "marketing.automation.workitem"
     _description = "Campaign Workitem"
 
-    segment_id = fields.Many2one('marketing.campaign.segment', 'Segment', readonly=True)
-    activity_id = fields.Many2one('marketing.campaign.activity', 'Activity', required=True, readonly=True)
-    campaign_id = fields.Many2one('marketing.campaign', related='activity_id.campaign_id', string='Campaign', readonly=True, store=True)
+    segment_id = fields.Many2one('marketing.automation.segment', 'Segment', readonly=True)
+    activity_id = fields.Many2one('marketing.automation.activity', 'Activity', required=True, readonly=True)
+    campaign_id = fields.Many2one('marketing.automation', related='activity_id.campaign_id', string='Campaign', readonly=True, store=True)
     object_id = fields.Many2one('ir.model', related='activity_id.campaign_id.object_id', string='Resource', index=1, readonly=True, store=True)
     res_id = fields.Integer('Resource ID', index=1, readonly=True)
     res_name = fields.Char(compute='_compute_res_name', string='Resource Name', search='_search_res_name')
@@ -456,9 +456,9 @@ class MarketingCampaignWorkitem(models.Model):
 
         self.env.cr.execute("""
             SELECT w.id, w.res_id, m.model
-            FROM marketing_campaign_workitem w \
-            LEFT JOIN marketing_campaign_activity a ON (a.id=w.activity_id)\
-            LEFT JOIN marketing_campaign c ON (c.id=a.campaign_id)\
+            FROM marketing_automation_workitem w \
+            LEFT JOIN marketing_automation_activity a ON (a.id=w.activity_id)\
+            LEFT JOIN marketing_automation c ON (c.id=a.campaign_id)\
             LEFT JOIN ir_model m ON (m.id=c.object_id)
         """)
         res = self.env.cr.fetchall()
@@ -572,9 +572,9 @@ class MarketingCampaignWorkitem(models.Model):
     @api.model
     def process_all(self, camp_ids=None):
         if camp_ids is None:
-            campaigns = self.env['marketing.campaign'].search([('state', '=', 'running')])
+            campaigns = self.env['marketing.automation'].search([('state', '=', 'running')])
         else:
-            campaigns = self.env['marketing.campaign'].browse(camp_ids)
+            campaigns = self.env['marketing.automation'].browse(camp_ids)
         for campaign in campaigns.filtered(lambda campaign: campaign.mode != 'manual'):
             while True:
                 domain = [('campaign_id', '=', campaign.id), ('state', '=', 'todo'), ('date', '!=', False)]

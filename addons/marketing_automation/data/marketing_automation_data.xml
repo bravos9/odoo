@@ -3,9 +3,9 @@
     <data noupdate="1">
 
     <!-- Cron -->
-        <record model="ir.cron" id="ir_cron_marketing_campaign_every_hour">
+        <record model="ir.cron" id="ir_cron_marketing_automation_every_hour">
             <field name="name">Marketing Campaign: Campaign workitems processing</field>
-            <field name="model_id" ref="model_marketing_campaign_workitem"/>
+            <field name="model_id" ref="model_marketing_automation_workitem"/>
             <field name="state">code</field>
             <field name="code">model.process_all()</field>
             <field name="interval_number">1</field>
@@ -14,9 +14,9 @@
             <field name="doall" eval="False"/>
         </record>
 
-        <record model="ir.cron" id="ir_cron_marketing_campaign_every_day">
+        <record model="ir.cron" id="ir_cron_marketing_automation_every_day">
             <field name="name">Marketing Campaign: Segment Sync</field>
-            <field name="model_id" ref="model_marketing_campaign_segment"/>
+            <field name="model_id" ref="model_marketing_automation_segment"/>
             <field name="state">code</field>
             <field name="code">model.process_segment()</field>
             <field name="interval_number">1</field>

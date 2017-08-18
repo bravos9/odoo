@@ -3,7 +3,7 @@
     <!-- Marketing Campaign -->
     
     <record id="act_marketing_campaing_segment_opened" model="ir.actions.act_window">
-        <field name="res_model">marketing.campaign.segment</field>
+        <field name="res_model">marketing.automation.segment</field>
         <field name="view_type">form</field>
         <field name="name">Segments</field>
         <field name="view_mode">tree,form</field>
@@ -13,7 +13,7 @@
     <!-- Campaign Follow-ups -->
         
     <record id="act_marketing_campaing_followup" model="ir.actions.act_window">
-        <field name="res_model">marketing.campaign.workitem</field>
+        <field name="res_model">marketing.automation.workitem</field>
         <field name="view_type">form</field>
         <field name="name">Workitems</field>
         <field name="view_mode">tree,form</field>
@@ -32,9 +32,9 @@
 
     <!-- Campaign Followups -->
 
-    <record model="ir.ui.view" id="view_marketing_campaign_form">
-        <field name="name">marketing.campaign.form</field>
-        <field name="model">marketing.campaign</field>
+    <record model="ir.ui.view" id="view_marketing_automation_form">
+        <field name="name">marketing.automation.form</field>
+        <field name="model">marketing.automation</field>
         <field name="arch" type="xml">
             <form string="Marketing Campaign">
             <header>
@@ -90,9 +90,9 @@
         </field>
     </record>
 
-    <record model="ir.ui.view" id="view_marketing_campaign_tree">
-        <field name="name">marketing.campaign.tree</field>
-        <field name="model">marketing.campaign</field>
+    <record model="ir.ui.view" id="view_marketing_automation_tree">
+        <field name="name">marketing.automation.tree</field>
+        <field name="model">marketing.automation</field>
         <field name="arch" type="xml">
             <tree decoration-info="state == 'draft'" decoration-muted="state in ('done','cancelled')" string="Campaigns">
                 <field name="name"/>
@@ -104,18 +104,18 @@
         </field>
     </record>
 
-    <record id="view_marketing_campaign_diagram" model="ir.ui.view">
-        <field name="name">marketing.campaign.diagram</field>
-        <field name="model">marketing.campaign</field>
+    <record id="view_marketing_automation_diagram" model="ir.ui.view">
+        <field name="name">marketing.automation.diagram</field>
+        <field name="model">marketing.automation</field>
         <field name="arch" type="xml">
             <diagram string="Campaign Editor">
-                <node object="marketing.campaign.activity" shape="rectangle:action_type=='subcampaign'" bgcolor="gray:start==True">
+                <node object="marketing.automation.activity" shape="rectangle:action_type=='subcampaign'" bgcolor="gray:start==True">
                     <field name="name"/>
                     <field name="action_type"/>
                     <field name="start" invisible="1"/>
                     <field name="condition" widget="char"/>
                 </node>
-                <arrow object="marketing.campaign.transition" source="activity_from_id" destination="activity_to_id" label="['name']">
+                <arrow object="marketing.automation.transition" source="activity_from_id" destination="activity_to_id" label="['name']">
                     <field name="activity_from_id"/>
                     <field name="activity_to_id"/>
                     <field name="interval_nbr"/>
@@ -125,9 +125,9 @@
         </field>
     </record>
 
-    <record id="view_marketing_campaign_search" model="ir.ui.view">
-        <field name="name">marketing.campaign.search</field>
-        <field name="model">marketing.campaign</field>
+    <record id="view_marketing_automation_search" model="ir.ui.view">
+        <field name="name">marketing.automation.search</field>
+        <field name="model">marketing.automation</field>
         <field name="arch" type="xml">
             <search string="Campaigns">
                 <field name="name" string="Campaign"/>
@@ -146,9 +146,9 @@
         </field>
     </record>
 
-    <record id="marketing_campaign_view_kanban" model="ir.ui.view">
-        <field name="name">marketing.campaign.kanban</field>
-        <field name="model">marketing.campaign</field>
+    <record id="marketing_automation_view_kanban" model="ir.ui.view">
+        <field name="name">marketing.automation.kanban</field>
+        <field name="model">marketing.automation</field>
         <field name="arch" type="xml">
             <kanban class="o_kanban_mobile">
                 <field name="name"/>
@@ -178,15 +178,15 @@
         </field>
     </record>
 
-    <record model="ir.actions.act_window" id="action_marketing_campaign_form">
+    <record model="ir.actions.act_window" id="action_marketing_automation_form">
         <field name="name">Campaigns</field>
         <field name="type">ir.actions.act_window</field>
-        <field name="res_model">marketing.campaign</field>
+        <field name="res_model">marketing.automation</field>
         <field name="view_type">form</field>
         <field name="view_mode">tree,kanban,form,diagram</field>
-        <field name="view_id" ref="view_marketing_campaign_tree"/>
+        <field name="view_id" ref="view_marketing_automation_tree"/>
         <field name="context">{'group_by': []}</field>
-        <field name="search_view_id" ref="view_marketing_campaign_search"/>
+        <field name="search_view_id" ref="view_marketing_automation_search"/>
         <field name="help" type="html">
           <p class="oe_view_nocontent_create">
             Click to create a marketing campaign.
@@ -203,17 +203,17 @@
         </field>
     </record>
 
-    <menuitem name="Lead Automation" id="menu_marketing_campaign_root" groups="marketing_automation.group_lead_automation_user,marketing_automation.group_lead_automation_manager" web_icon="marketing_campaign,static/description/icon.png"
+    <menuitem name="Lead Automation" id="menu_marketing_automation_root" groups="marketing_automation.group_lead_automation_user,marketing_automation.group_lead_automation_manager" web_icon="marketing_automation,static/description/icon.png"
     sequence="10"/>
-    <menuitem id="menu_marketing_campaign_campaigns" sequence="1" name="Campaigns" parent="menu_marketing_campaign_root" web_icon="marketing_campaign,static/description/icon.png"/>
-    <menuitem id="menu_marketing_campaign_form" parent="menu_marketing_campaign_campaigns" action="action_marketing_campaign_form" sequence="1"/>
-    <menuitem name="Reporting" id="report_marketing_campaign" parent="menu_marketing_campaign_root" 
+    <menuitem id="menu_marketing_automation_campaigns" sequence="1" name="Campaigns" parent="menu_marketing_automation_root" web_icon="marketing_automation,static/description/icon.png"/>
+    <menuitem id="menu_marketing_automation_form" parent="menu_marketing_automation_campaigns" action="action_marketing_automation_form" sequence="1"/>
+    <menuitem name="Reporting" id="report_marketing_automation" parent="menu_marketing_automation_root" 
         sequence="99"/>
 
     <!-- Marketing Segments -->
-    <record model="ir.ui.view" id="view_marketing_campaign_segment_form">
-        <field name="name">marketing.campaign.segment.form</field>
-        <field name="model">marketing.campaign.segment</field>
+    <record model="ir.ui.view" id="view_marketing_automation_segment_form">
+        <field name="name">marketing.automation.segment.form</field>
+        <field name="model">marketing.automation.segment</field>
         <field name="arch" type="xml">
             <form string="Marketing Campaign Segment">
             <header>
@@ -248,9 +248,9 @@
         </field>
     </record>
 
-    <record model="ir.ui.view" id="view_marketing_campaign_segment_tree">
-        <field name="name">marketing.campaign.segment.tree</field>
-        <field name="model">marketing.campaign.segment</field>
+    <record model="ir.ui.view" id="view_marketing_automation_segment_tree">
+        <field name="name">marketing.automation.segment.tree</field>
+        <field name="model">marketing.automation.segment</field>
         <field name="arch" type="xml">
             <tree decoration-info="state == 'draft'" decoration-muted="state in ('done','cancelled')" string="Segments">
                 <field name="name"/>
@@ -262,9 +262,9 @@
         </field>
     </record>
 
-    <record id="marketing_campaign_segment_view_kanban" model="ir.ui.view">
-        <field name="name">marketing.campaign.segment.kanban</field>
-        <field name="model">marketing.campaign.segment</field>
+    <record id="marketing_automation_segment_view_kanban" model="ir.ui.view">
+        <field name="name">marketing.automation.segment.kanban</field>
+        <field name="model">marketing.automation.segment</field>
         <field name="arch" type="xml">
             <kanban class="o_kanban_mobile">
                 <field name="name"/>
@@ -294,9 +294,9 @@
         </field>
     </record>
 
-    <record id="view_marketing_campaign_segment_search" model="ir.ui.view">
-        <field name="name">marketing.campaign.segment.search</field>
-        <field name="model">marketing.campaign.segment</field>
+    <record id="view_marketing_automation_segment_search" model="ir.ui.view">
+        <field name="name">marketing.automation.segment.search</field>
+        <field name="model">marketing.automation.segment</field>
         <field name="arch" type="xml">
             <search string="Segments">
                 <field name="name" string="Segment"/>
@@ -318,26 +318,26 @@
         </field>
     </record>
 
-    <record model="ir.actions.act_window" id="action_marketing_campaign_segment_form">
+    <record model="ir.actions.act_window" id="action_marketing_automation_segment_form">
         <field name="name">Segments</field>
         <field name="type">ir.actions.act_window</field>
-        <field name="res_model">marketing.campaign.segment</field>
+        <field name="res_model">marketing.automation.segment</field>
         <field name="view_type">form</field>
         <field name="view_mode">tree,kanban,form</field>
-        <field name="view_id" ref="view_marketing_campaign_segment_tree"/>
-        <field name="search_view_id" ref="view_marketing_campaign_segment_search"/>
+        <field name="view_id" ref="view_marketing_automation_segment_tree"/>
+        <field name="search_view_id" ref="view_marketing_automation_segment_search"/>
         <field name="context">{'group_by': []}</field>
     </record>
 
-    <menuitem id="menu_marketing_campaign_segment_form" parent="menu_marketing_campaign_campaigns" action="action_marketing_campaign_segment_form" sequence="2"/>
+    <menuitem id="menu_marketing_automation_segment_form" parent="menu_marketing_automation_campaigns" action="action_marketing_automation_segment_form" sequence="2"/>
 
     <!--
         Marketing Activities
         These views are not intended to be used outside the campaign context.
     -->
-    <record model="ir.ui.view" id="view_marketing_campaign_activity_form">
-        <field name="name">marketing.campaign.activity.form</field>
-        <field name="model">marketing.campaign.activity</field>
+    <record model="ir.ui.view" id="view_marketing_automation_activity_form">
+        <field name="name">marketing.automation.activity.form</field>
+        <field name="model">marketing.automation.activity</field>
         <field name="arch" type="xml">
             <form string="Activities">
                 <group>
@@ -404,9 +404,9 @@
         </field>
     </record>
 
-    <record model="ir.ui.view" id="view_marketing_campaign_activity_tree">
-        <field name="name">marketing.campaign.activity.tree</field>
-        <field name="model">marketing.campaign.activity</field>
+    <record model="ir.ui.view" id="view_marketing_automation_activity_tree">
+        <field name="name">marketing.automation.activity.tree</field>
+        <field name="model">marketing.automation.activity</field>
         <field name="arch" type="xml">
             <tree string="Activities">
                 <field name="name"/>
@@ -419,9 +419,9 @@
 
 
     <!-- Marketing Workitems -->
-    <record model="ir.ui.view" id="view_marketing_campaign_workitem_tree">
-        <field name="name">marketing.campaign.workitem.tree</field>
-        <field name="model">marketing.campaign.workitem</field>
+    <record model="ir.ui.view" id="view_marketing_automation_workitem_tree">
+        <field name="name">marketing.automation.workitem.tree</field>
+        <field name="model">marketing.automation.workitem</field>
         <field name="arch" type="xml">
             <tree decoration-danger="state == 'exception'" decoration-muted="state == 'cancelled'" string="Marketing Campaign Activities">
                 <field name="campaign_id"/>
@@ -440,9 +440,9 @@
         </field>
     </record>
 
-    <record model="ir.ui.view" id="view_marketing_campaign_workitem_form">
-        <field name="name">marketing.campaign.workitem.form</field>
-        <field name="model">marketing.campaign.workitem</field>
+    <record model="ir.ui.view" id="view_marketing_automation_workitem_form">
+        <field name="name">marketing.automation.workitem.form</field>
+        <field name="model">marketing.automation.workitem</field>
         <field name="arch" type="xml">
             <form string="Marketing Campaign Activities">
             <header>
@@ -475,9 +475,9 @@
         </field>
     </record>
 
-    <record id="view_marketing_campaign_workitem_search" model="ir.ui.view">
-        <field name="name">marketing.campaign.workitem.search</field>
-        <field name="model">marketing.campaign.workitem</field>
+    <record id="view_marketing_automation_workitem_search" model="ir.ui.view">
+        <field name="name">marketing.automation.workitem.search</field>
+        <field name="model">marketing.automation.workitem</field>
         <field name="arch" type="xml">
             <search string="Marketing Campaign Activities">
                 <field name="res_name" string="Marketing Campaign Activity"/>
@@ -502,17 +502,17 @@
         </field>
     </record>
 
-    <record model="ir.actions.act_window" id="action_marketing_campaign_workitem">
+    <record model="ir.actions.act_window" id="action_marketing_automation_workitem">
         <field name="name">Follow-up</field>
         <field name="type">ir.actions.act_window</field>
-        <field name="res_model">marketing.campaign.workitem</field>
+        <field name="res_model">marketing.automation.workitem</field>
         <field name="view_type">form</field>
         <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="view_marketing_campaign_workitem_tree"/>
-        <field name="search_view_id" ref="view_marketing_campaign_workitem_search"/>
+        <field name="view_id" ref="view_marketing_automation_workitem_tree"/>
+        <field name="search_view_id" ref="view_marketing_automation_workitem_search"/>
         <field name="context">{'group_by': []}</field>
     </record>
 
-    <menuitem id="menu_action_marketing_campaign_workitem" parent="report_marketing_campaign" action="action_marketing_campaign_workitem" sequence="3"/>
+    <menuitem id="menu_action_marketing_automation_workitem" parent="report_marketing_automation" action="action_marketing_automation_workitem" sequence="3"/>
 
 </odoo>

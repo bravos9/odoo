@@ -42,7 +42,7 @@
 
 
     <!-- Campaign -->
-        <record id="marketing_campaign_openerppartnerchannel" model="marketing.campaign">
+        <record id="marketing_automation_openerppartnerchannel" model="marketing.automation">
             <field name="name">Odoo Partner Channel</field>
             <field name="object_id" ref="base.model_res_partner"/>
             <field name="mode">active</field>
@@ -50,40 +50,40 @@
 
             <!-- Activity -->
 
-        <record id="marketing_campaign_activity_0" model="marketing.campaign.activity">
+        <record id="marketing_automation_activity_0" model="marketing.automation.activity">
             <field name="name">New Partner</field>
-            <field name="campaign_id" ref="marketing_campaign_openerppartnerchannel"/>
+            <field name="campaign_id" ref="marketing_automation_openerppartnerchannel"/>
             <field name="email_template_id" ref="email_template_1"/>
             <field name="condition">object.credit_limit &lt; 10000</field>
             <field name="keep_if_condition_not_met">True</field>
             <field eval="1" name="start"/>
         </record>
-        <record id="marketing_campaign_activity_1" model="marketing.campaign.activity">
+        <record id="marketing_automation_activity_1" model="marketing.automation.activity">
             <field name="name">Silver Partner</field>
-            <field name="campaign_id" ref="marketing_campaign_openerppartnerchannel"/>
+            <field name="campaign_id" ref="marketing_automation_openerppartnerchannel"/>
             <field name="condition">object.credit_limit &gt;= 10000 and object.credit_limit &lt; 50000</field>
             <field name="keep_if_condition_not_met">True</field>
             <field name="email_template_id" ref="email_template_2"/>
         </record>
 
-        <record id="marketing_campaign_activity_2" model="marketing.campaign.activity">
+        <record id="marketing_automation_activity_2" model="marketing.automation.activity">
             <field name="name">Gold Partner</field>
             <field name="condition">object.credit_limit &gt;= 100000</field>
-            <field name="campaign_id" ref="marketing_campaign_openerppartnerchannel"/>
+            <field name="campaign_id" ref="marketing_automation_openerppartnerchannel"/>
             <field name="keep_if_condition_not_met">True</field>
             <field name="email_template_id" ref="email_template_3"/>
         </record>
 
 
     <!-- Transition -->
-        <record id="marketing_campaign_transition_0" model="marketing.campaign.transition">
-            <field name="activity_from_id" ref="marketing_campaign_activity_0"/>
-            <field name="activity_to_id" ref="marketing_campaign_activity_1"/>
+        <record id="marketing_automation_transition_0" model="marketing.automation.transition">
+            <field name="activity_from_id" ref="marketing_automation_activity_0"/>
+            <field name="activity_to_id" ref="marketing_automation_activity_1"/>
         </record>
 
-        <record id="marketing_campaign_transition_1" model="marketing.campaign.transition">
-            <field name="activity_from_id" ref="marketing_campaign_activity_1"/>
-            <field name="activity_to_id" ref="marketing_campaign_activity_2"/>
+        <record id="marketing_automation_transition_1" model="marketing.automation.transition">
+            <field name="activity_from_id" ref="marketing_automation_activity_1"/>
+            <field name="activity_to_id" ref="marketing_automation_activity_2"/>
         </record>
 
     <!-- Segment -->
@@ -92,12 +92,12 @@
             <field name="domain">[('name','like','Agrolait')]</field>
             <field name="model_id">res.partner</field>
         </record>
-        <record id="marketing_campaign_segment0" model="marketing.campaign.segment">
+        <record id="marketing_automation_segment0" model="marketing.automation.segment">
             <field eval="time.strftime('%Y-%m-%d %H:%M:%S')" name="date_run"/>
             <field name="name">Odoo Partner</field>
             <field name="sync_mode">create_date</field>
             <field name="ir_filter_id" ref="filter0"/>
-            <field name="campaign_id" ref="marketing_campaign_openerppartnerchannel"/>
+            <field name="campaign_id" ref="marketing_automation_openerppartnerchannel"/>
         </record>
 
 </odoo>

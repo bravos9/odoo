@@ -28,9 +28,9 @@ class CampaignAnalysis(models.Model):
         ], 'Execution Month', readonly=True)
     day = fields.Char('Execution Day', readonly=True)
     date = fields.Date('Execution Date', readonly=True, index=True)
-    campaign_id = fields.Many2one('marketing.campaign', 'Campaign', readonly=True)
-    activity_id = fields.Many2one('marketing.campaign.activity', 'Activity', readonly=True)
-    segment_id = fields.Many2one('marketing.campaign.segment', 'Segment', readonly=True)
+    campaign_id = fields.Many2one('marketing.automation', 'Campaign', readonly=True)
+    activity_id = fields.Many2one('marketing.automation.activity', 'Activity', readonly=True)
+    segment_id = fields.Many2one('marketing.automation.segment', 'Segment', readonly=True)
     partner_id = fields.Many2one('res.partner', 'Partner', readonly=True)
     country_id = fields.Many2one('res.country', related='partner_id.country_id', string='Country')
     total_cost = fields.Float(compute='_compute_total_cost', string='Cost')
@@ -46,7 +46,7 @@ class CampaignAnalysis(models.Model):
     @api.multi
     def _compute_total_cost(self):
         for analysis in self:
-            wi_count = self.env['marketing.campaign.workitem'].search_count([('segment_id.campaign_id', '=', analysis.campaign_id.id)])
+            wi_count = self.env['marketing.automation.workitem'].search_count([('segment_id.campaign_id', '=', analysis.campaign_id.id)])
             analysis.total_cost = analysis.activity_id.variable_cost + ((analysis.campaign_id.fixed_cost or 1.00) / wi_count)
 
     @api.model_cr
@@ -69,10 +69,10 @@ class CampaignAnalysis(models.Model):
                 sum(act.revenue) AS revenue,
                 count(*) AS count
             FROM
-                marketing_campaign_workitem wi
+                marketing_automation_workitem wi
                 LEFT JOIN res_partner p ON (p.id=wi.partner_id)
-                LEFT JOIN marketing_campaign_segment s ON (s.id=wi.segment_id)
-                LEFT JOIN marketing_campaign_activity act ON (act.id= wi.activity_id)
+                LEFT JOIN marketing_automation_segment s ON (s.id=wi.segment_id)
+                LEFT JOIN marketing_automation_activity act ON (act.id= wi.activity_id)
             GROUP BY
                 s.campaign_id,wi.activity_id,wi.segment_id,wi.partner_id,wi.state,
                 wi.date::date

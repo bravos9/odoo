@@ -26,7 +26,7 @@ The campaigns are dynamic and multi-channels. The process is as follows:
 While the campaign runs you can of course continue to fine-tune the parameters,
 input segments, workflow.
 
-**Note:** If you need demo data, you can install the marketing_campaign_crm_demo
+**Note:** If you need demo data, you can install the marketing_automation_crm_demo
       module, but this will also install the CRM application as it depends on
       CRM Leads.
     """,
