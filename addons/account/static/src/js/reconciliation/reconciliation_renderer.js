@@ -236,8 +236,7 @@ var LineRenderer = Widget.extend(FieldManagerMixin, {
         'click .accounting_view thead td': '_onTogglePanel',
         'click .accounting_view tfoot td': '_onShowPanel',
         'input input.filter': '_onFilterChange',
-        'click .match_controls .fa-chevron-left:not(.disabled)': '_onPrevious',
-        'click .match_controls .fa-chevron-right:not(.disabled)': '_onNext',
+        'click .show_more:not(.disabled)': '_showMore',
         'click .match .mv_line td': '_onSelectMoveLine',
         'click .accounting_view tbody .mv_line td': '_onSelectProposition',
         'click .o_reconcile_models button': '_onQuickCreateProposition',
@@ -376,6 +375,7 @@ var LineRenderer = Widget.extend(FieldManagerMixin, {
             }
             $mv_lines.append($line);
         });
+        this.$('.show_more').toggleClass('disabled', state.mv_lines.length <= 40);
 
         // balance
         this.$('table tfoot').html(qweb.render("reconciliation.line.balance", {'state': state}));
@@ -570,6 +570,12 @@ var LineRenderer = Widget.extend(FieldManagerMixin, {
     /**
      * @private
      */
+    _showMore: function () {
+        this.trigger_up('change_mode', {'data': ''});
+    },
+    /**
+     * @private
+     */
     _onShowPanel: function () {
         var mode = (this.$el.data('mode') === 'inactive' || this.$el.data('mode') === 'match') ? 'create' : 'match';
         this.trigger_up('change_mode', {'data': mode});
@@ -579,18 +585,6 @@ var LineRenderer = Widget.extend(FieldManagerMixin, {
      */
     _onFilterChange: function () {
         this.trigger_up('change_filter', {'data': _.str.strip($(event.target).val())});
-    },
-    /**
-     * @private
-     */
-    _onPrevious: function () {
-        this.trigger_up('change_offset', {'data': -5});
-    },
-    /**
-     * @private
-     */
-    _onNext: function () {
-        this.trigger_up('change_offset', {'data': 5});
     },
     /**
      * @private
