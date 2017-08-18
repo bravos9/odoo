@@ -11,14 +11,14 @@ class TestMarketingCampaignFlow(common.TransactionCase):
         Workitem = self.env['marketing.campaign.workitem']
 
         # In order to test process of compaign, I start compaign.
-        partner_channel = self.env.ref('marketing_campaign.marketing_campaign_openerppartnerchannel')
+        partner_channel = self.env.ref('marketing_automation.marketing_campaign_openerppartnerchannel')
         partner_channel.state_running_set()
 
         # I check the campaign on Running mode after started.
         self.assertEqual(partner_channel.state, 'running', 'The campaign should be on Running mode after having started.')
 
         # I start this segment after assinged campaign.
-        segment0 = self.env.ref('marketing_campaign.marketing_campaign_segment0')
+        segment0 = self.env.ref('marketing_automation.marketing_campaign_segment0')
         segment0.state_running_set()
 
         # I check the segment on Running mode after started.
@@ -41,7 +41,7 @@ class TestMarketingCampaignFlow(common.TransactionCase):
         self.assertTrue(workitems[0].state in ('todo', 'done'), 'Marketing Workitem shoud be in draft state.')
 
         # I process follow-up of first activity.
-        activity0_id = self.ref('marketing_campaign.marketing_campaign_activity_0')
+        activity0_id = self.ref('marketing_automation.marketing_campaign_activity_0')
         workitems = Workitem.search([
             ('segment_id', '=', segment0.id),
             ('campaign_id', '=', partner_channel.id),
@@ -53,7 +53,7 @@ class TestMarketingCampaignFlow(common.TransactionCase):
         self.assertEqual(workitems[0].state, 'done', "Follow-up item should be closed after process.")
 
         # I check follow-up detail of second activity after process of first activity.
-        activity1_id = self.ref('marketing_campaign.marketing_campaign_activity_1')
+        activity1_id = self.ref('marketing_automation.marketing_campaign_activity_1')
         workitems = Workitem.search([
             ('segment_id', '=', segment0.id),
             ('campaign_id', '=', partner_channel.id),
@@ -70,7 +70,7 @@ class TestMarketingCampaignFlow(common.TransactionCase):
         self.assertEqual(workitems[0].state, 'done', "Follow-up item should be closed after process.")
 
         # I check follow-up detail of third activity after process of second activity.
-        activity2_id = self.ref('marketing_campaign.marketing_campaign_activity_2')
+        activity2_id = self.ref('marketing_automation.marketing_campaign_activity_2')
         workitems = Workitem.search([
             ('segment_id', '=', segment0.id),
             ('campaign_id', '=', partner_channel.id),

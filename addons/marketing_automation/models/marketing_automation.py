@@ -188,7 +188,7 @@ class MarketingCampaignSegment(models.Model):
 
     def _compute_date_next_sync(self):
         # next auto sync date is same for all segments
-        sync_job = self.sudo().env.ref('marketing_campaign.ir_cron_marketing_campaign_every_day')
+        sync_job = self.sudo().env.ref('marketing_automation.ir_cron_marketing_campaign_every_day')
         self.date_next_sync = sync_job and sync_job.nextcall or False
 
     @api.constrains('ir_filter_id', 'campaign_id')

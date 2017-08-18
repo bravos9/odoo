@@ -32,11 +32,11 @@ input segments, workflow.
     """,
     'website': 'https://www.odoo.com/page/lead-automation',
     'data': [
-        'security/marketing_campaign_security.xml',
+        'security/marketing_automation_security.xml',
         'security/ir.model.access.csv',
-        'views/marketing_campaign_views.xml',
-        'data/marketing_campaign_data.xml',
+        'views/marketing_automation_views.xml',
+        'data/marketing_automation_data.xml',
         'report/campaign_analysis_view.xml',
     ],
-    'demo': ['data/marketing_campaign_demo.xml'],
+    'demo': ['data/marketing_automation_demo.xml'],
 }
